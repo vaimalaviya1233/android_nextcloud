@@ -313,6 +313,11 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
 
         @Override
         protected String doInBackground(Void... voids) {
+            Context context = getContext();
+
+            if (context == null) {
+                return null;
+            }
             // fetch private/public key
             // if available
             //  - store public key
@@ -321,7 +326,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
             Context context = mWeakContext.get();
             GetPublicKeyOperation publicKeyOperation = new GetPublicKeyOperation();
             if (user != null) {
-                RemoteOperationResult<String> publicKeyResult = publicKeyOperation.execute(user, context);
+                RemoteOperationResult<String> publicKeyResult = publicKeyOperation.executeNextcloudClient(user, context);
 
                 if (publicKeyResult.isSuccess()) {
                     Log_OC.d(TAG, "public key successful downloaded for " + user.getAccountName());
@@ -338,8 +343,8 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                     return null;
                 }
 
-                RemoteOperationResult<com.owncloud.android.lib.ocs.responses.PrivateKey> privateKeyResult =
-                    new GetPrivateKeyOperation().execute(user, context);
+            RemoteOperationResult<com.owncloud.android.lib.ocs.responses.PrivateKey> privateKeyResult =
+                new GetPrivateKeyOperation().executeNextcloudClient(user, context);
 
                 if (privateKeyResult.isSuccess()) {
                     Log_OC.d(TAG, "private key successful downloaded for " + user.getAccountName());

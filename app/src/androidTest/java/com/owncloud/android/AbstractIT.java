@@ -112,14 +112,11 @@ public abstract class AbstractIT {
 
             client = OwnCloudClientFactory.createOwnCloudClient(account, targetContext);
             nextcloudClient = OwnCloudClientFactory.createNextcloudClient(user, targetContext);
-        } catch (OperationCanceledException e) {
-            e.printStackTrace();
-        } catch (AuthenticatorException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (AccountUtils.AccountNotFoundException e) {
-            e.printStackTrace();
+        } catch (OperationCanceledException |
+                 IOException |
+                 AccountUtils.AccountNotFoundException |
+                 AuthenticatorException e) {
+            throw new RuntimeException("Error setting up clients", e);
         }
 
         Bundle arguments = androidx.test.platform.app.InstrumentationRegistry.getArguments();
