@@ -71,7 +71,6 @@ import androidx.fragment.app.Fragment;
 import static com.owncloud.android.utils.EncryptionUtils.MNEMONIC;
 import static com.owncloud.android.utils.EncryptionUtils.decodeStringToBase64Bytes;
 import static com.owncloud.android.utils.EncryptionUtils.decryptStringAsymmetric;
-import static com.owncloud.android.utils.EncryptionUtils.encodeBytesToBase64String;
 import static com.owncloud.android.utils.EncryptionUtils.generateKey;
 
 /*
@@ -216,7 +215,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                                                                               EncryptionUtils.PUBLIC_KEY);
 
                             byte[] key1 = generateKey();
-                            String base64encodedKey = encodeBytesToBase64String(key1);
+                            String base64encodedKey = EncryptionUtils.encodeBytesToBase64String(key1);
 
                             String encryptedString = EncryptionUtils.encryptStringAsymmetric(base64encodedKey,
                                                                                              publicKey);
@@ -411,6 +410,13 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
 
                 String publicKeyString;
 
+                Context context = getContext();
+
+                if (context == null) {
+                    keyResult = KEY_FAILED;
+                    return "";
+                }
+
                 // Create public/private key pair
                 KeyPair keyPair = EncryptionUtils.generateKeyPair();
 
@@ -420,10 +426,10 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                 String urlEncoded = CsrHelper.generateCsrPemEncodedString(keyPair, userId);
 
                 SendCSROperation operation = new SendCSROperation(urlEncoded);
-                RemoteOperationResult result = operation.execute(user, context);
+                RemoteOperationResult<String> result = operation.executeNextcloudClient(user, context);
 
                 if (result.isSuccess()) {
-                    publicKeyString = (String) result.getData().get(0);
+                    publicKeyString = result.getResultData();
 
                     if (!EncryptionUtils.isMatchingKeys(keyPair, publicKeyString)) {
                         throw new RuntimeException("Wrong CSR returned");
@@ -443,7 +449,9 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
 
                 // upload encryptedPrivateKey
                 StorePrivateKeyOperation storePrivateKeyOperation = new StorePrivateKeyOperation(encryptedPrivateKey);
-                RemoteOperationResult storePrivateKeyResult = storePrivateKeyOperation.execute(user, context);
+                RemoteOperationResult<String> storePrivateKeyResult =
+                    storePrivateKeyOperation.executeNextcloudClient(user,
+                                                                    context);
 
                 if (storePrivateKeyResult.isSuccess()) {
                     Log_OC.d(TAG, "private key success");
@@ -459,10 +467,9 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                                                                 generateMnemonicString(true));
 
                     keyResult = KEY_CREATED;
-                    return (String) storePrivateKeyResult.getData().get(0);
+                    return storePrivateKeyResult.getResultData();
                 } else {
-                    DeletePublicKeyOperation deletePublicKeyOperation = new DeletePublicKeyOperation();
-                    deletePublicKeyOperation.execute(user, context);
+                    new DeletePublicKeyOperation().executeNextcloudClient(user, context);
                 }
             } catch (Exception e) {
                 Log_OC.e(TAG, e.getMessage());
