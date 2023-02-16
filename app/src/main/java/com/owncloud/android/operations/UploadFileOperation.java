@@ -34,12 +34,14 @@ import com.nextcloud.client.network.Connectivity;
 import com.nextcloud.client.network.ConnectivityService;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
-import com.owncloud.android.datamodel.DecryptedFolderMetadata;
-import com.owncloud.android.datamodel.EncryptedFolderMetadata;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.ThumbnailsCacheManager;
 import com.owncloud.android.datamodel.UploadsStorageManager;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.db.OCUpload;
 import com.owncloud.android.files.services.FileUploader;
 import com.owncloud.android.files.services.NameCollisionPolicy;
@@ -82,7 +84,6 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.annotation.CheckResult;
@@ -476,7 +477,7 @@ public class UploadFileOperation extends SyncOperation {
                                                                                                    user);
 
             metadataExists = metadataPair.first;
-            DecryptedFolderMetadata metadata = metadataPair.second;
+            DecryptedFolderMetadataFile metadata = metadataPair.second;
 
             /**** E2E *****/
 
@@ -512,10 +513,10 @@ public class UploadFileOperation extends SyncOperation {
             EncryptionUtils.EncryptedFile encryptedFile = EncryptionUtils.encryptFile(mFile, key, iv);
 
             // new random file name, check if it exists in metadata
-            String encryptedFileName = UUID.randomUUID().toString().replaceAll("-", "");
+            String encryptedFileName = EncryptionUtils.generateUid();
 
             while (metadata.getFiles().get(encryptedFileName) != null) {
-                encryptedFileName = UUID.randomUUID().toString().replaceAll("-", "");
+                encryptedFileName = EncryptionUtils.generateUid();
             }
 
             File encryptedTempFile = File.createTempFile("encFile", encryptedFileName);
@@ -606,8 +607,8 @@ public class UploadFileOperation extends SyncOperation {
                 mFile.setRemotePath(parentFile.getRemotePath() + encryptedFileName);
 
                 // update metadata
-                DecryptedFolderMetadata.DecryptedFile decryptedFile = new DecryptedFolderMetadata.DecryptedFile();
-                DecryptedFolderMetadata.Data data = new DecryptedFolderMetadata.Data();
+                DecryptedFile decryptedFile = new DecryptedFile();
+                Data data = new Data();
                 data.setFilename(mFile.getDecryptedFileName());
                 data.setMimetype(mFile.getMimeType());
                 data.setKey(EncryptionUtils.encodeBytesToBase64String(key));
@@ -945,7 +946,7 @@ public class UploadFileOperation extends SyncOperation {
 
     @CheckResult
     private RemoteOperationResult checkNameCollision(OwnCloudClient client,
-                                                     DecryptedFolderMetadata metadata,
+                                                     DecryptedFolderMetadataFile metadata,
                                                      boolean encrypted)
         throws OperationCancelledException {
         Log_OC.d(TAG, "Checking name collision in server");
@@ -1115,15 +1116,14 @@ public class UploadFileOperation extends SyncOperation {
     }
 
     /**
-     * Returns a new and available (does not exists on the server) remotePath.
-     * This adds an incremental suffix.
+     * Returns a new and available (does not exists on the server) remotePath. This adds an incremental suffix.
      *
      * @param client     OwnCloud client
      * @param remotePath remote path of the file
      * @param metadata   metadata of encrypted folder
      * @return new remote path
      */
-    private String getNewAvailableRemotePath(OwnCloudClient client, String remotePath, DecryptedFolderMetadata metadata,
+    private String getNewAvailableRemotePath(OwnCloudClient client, String remotePath, DecryptedFolderMetadataFile metadata,
                                              boolean encrypted) {
         int extPos = remotePath.lastIndexOf('.');
         String suffix;
@@ -1147,12 +1147,12 @@ public class UploadFileOperation extends SyncOperation {
         return newPath;
     }
 
-    private boolean existsFile(OwnCloudClient client, String remotePath, DecryptedFolderMetadata metadata,
+    private boolean existsFile(OwnCloudClient client, String remotePath, DecryptedFolderMetadataFile metadata,
                                boolean encrypted) {
         if (encrypted) {
             String fileName = new File(remotePath).getName();
 
-            for (DecryptedFolderMetadata.DecryptedFile file : metadata.getFiles().values()) {
+            for (DecryptedFile file : metadata.getFiles().values()) {
                 if (file.getEncrypted().getFilename().equalsIgnoreCase(fileName)) {
                     return true;
                 }

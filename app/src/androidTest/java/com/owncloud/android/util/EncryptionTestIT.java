@@ -28,6 +28,13 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nextcloud.test.RandomStringGenerator;
 import com.nextcloud.test.RetryTestRule;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Encrypted;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Sharing;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.AbstractIT;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
@@ -329,6 +336,35 @@ public class EncryptionTestIT extends AbstractIT {
                                       serializeJSON(decryptedFolderMetadata2)));
     }
 
+    /**
+     * DecryptedFolderMetadataFile -> EncryptedFolderMetadataFile -> JSON -> encrypt -> decrypt -> JSON ->
+     * EncryptedFolderMetadataFile -> DecryptedFolderMetadataFile
+     */
+    @Test
+    public void encryptionMetadata2() throws Exception {
+        DecryptedFolderMetadataFile decryptedFolderMetadata1 = generateFolderMetadata();
+
+        // encrypt
+        EncryptedFolderMetadataFile encryptedFolderMetadata1 = encryptFolderMetadata(
+            decryptedFolderMetadata1, privateKey);
+
+        // serialize
+        String encryptedJson = serializeJSON(encryptedFolderMetadata1);
+
+        // de-serialize
+        EncryptedFolderMetadataFile encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
+                                                                               new TypeToken<EncryptedFolderMetadataFile>() {
+                                                                               });
+
+        // decrypt
+        DecryptedFolderMetadataFile decryptedFolderMetadata2 = decryptFolderMetaData(
+            encryptedFolderMetadata2, privateKey);
+
+        // compare
+        assertTrue(compareJsonStrings(serializeJSON(decryptedFolderMetadata1),
+                                      serializeJSON(decryptedFolderMetadata2)));
+    }
+
     @Test
     public void testChangedMetadataKey() throws Exception {
         DecryptedFolderMetadata decryptedFolderMetadata1 = generateFolderMetadata();
@@ -403,7 +439,7 @@ public class EncryptionTestIT extends AbstractIT {
 
     @Test
     public void cryptFileWithMetadata() throws Exception {
-        DecryptedFolderMetadata metadata = generateFolderMetadata();
+        DecryptedFolderMetadataFile metadata = generateFolderMetadata();
 
         // n9WXAIXO2wRY4R8nXwmo
         assertTrue(cryptFile("ia7OEEEyXMoRa1QWQk8r",
@@ -444,9 +480,9 @@ public class EncryptionTestIT extends AbstractIT {
         String encryptedJson = serializeJSON(encryptedFolderMetadata1);
 
         // de-serialize
-        EncryptedFolderMetadata encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
-                                                                           new TypeToken<EncryptedFolderMetadata>() {
-                                                                           });
+        EncryptedFolderMetadataFile encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
+                                                                               new TypeToken<EncryptedFolderMetadataFile>() {
+                                                                               });
 
         // decrypt
         DecryptedFolderMetadata decryptedFolderMetadata2 = decryptFolderMetaData(
@@ -483,7 +519,7 @@ public class EncryptionTestIT extends AbstractIT {
 
             // de-serialize
             encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
-                                                       new TypeToken<EncryptedFolderMetadata>() {
+                                                       new TypeToken<EncryptedFolderMetadataFile>() {
                                                        });
 
             // decrypt
@@ -503,20 +539,78 @@ public class EncryptionTestIT extends AbstractIT {
     }
 
     @Test
+    public void bigMetadata2() throws Exception {
+        DecryptedFolderMetadataFile decryptedFolderMetadata1 = generateFolderMetadata();
+
+        // encrypt
+        EncryptedFolderMetadataFile encryptedFolderMetadata1 = encryptFolderMetadata(
+            decryptedFolderMetadata1, privateKey);
+
+        // serialize
+        String encryptedJson = serializeJSON(encryptedFolderMetadata1);
+
+        // de-serialize
+        EncryptedFolderMetadataFile encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
+                                                                               new TypeToken<EncryptedFolderMetadataFile>() {
+                                                                               });
+
+        // decrypt
+        DecryptedFolderMetadataFile decryptedFolderMetadata2 = decryptFolderMetaData(
+            encryptedFolderMetadata2, privateKey);
+
+        // compare
+        assertTrue(compareJsonStrings(serializeJSON(decryptedFolderMetadata1),
+                                      serializeJSON(decryptedFolderMetadata2)));
+
+        // prefill with 500
+        for (int i = 0; i < 500; i++) {
+            addFile(decryptedFolderMetadata1, i);
+        }
+
+        int max = 505;
+        for (int i = 500; i < max; i++) {
+            Log_OC.d(this, "Big metadata: " + i + " of " + max);
+
+            addFile(decryptedFolderMetadata1, i);
+
+            // encrypt
+            encryptedFolderMetadata1 = encryptFolderMetadata(decryptedFolderMetadata1, privateKey);
+
+            // serialize
+            encryptedJson = serializeJSON(encryptedFolderMetadata1);
+
+            // de-serialize
+            encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
+                                                       new TypeToken<EncryptedFolderMetadataFile>() {
+                                                       });
+
+            // decrypt
+            decryptedFolderMetadata2 = decryptFolderMetaData(encryptedFolderMetadata2, privateKey);
+
+            // compare
+            assertTrue(compareJsonStrings(serializeJSON(decryptedFolderMetadata1),
+                                          serializeJSON(decryptedFolderMetadata2)));
+
+            assertEquals(i + 3, decryptedFolderMetadata1.getFiles().size());
+            assertEquals(i + 3, decryptedFolderMetadata2.getFiles().size());
+        }
+    }
+
+    @Test
     public void filedrop() throws Exception {
         DecryptedFolderMetadata decryptedFolderMetadata1 = generateFolderMetadata();
         ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProviderImpl(targetContext);
         long folderID = 1;
 
         // add filedrop
-        Map<String, DecryptedFolderMetadata.DecryptedFile> filesdrop = new HashMap<>();
+        Map<String, DecryptedFile> filesdrop = new HashMap<>();
 
-        DecryptedFolderMetadata.Data data = new DecryptedFolderMetadata.Data();
+        Data data = new Data();
         data.setKey("9dfzbIYDt28zTyZfbcll+g==");
         data.setFilename("test2.txt");
         data.setVersion(1);
 
-        DecryptedFolderMetadata.DecryptedFile file = new DecryptedFolderMetadata.DecryptedFile();
+        DecryptedFile file = new DecryptedFile();
         file.setInitializationVector("hnJLF8uhDvDoFK4ajuvwrg==");
         file.setEncrypted(data);
         file.setMetadataKey(0);
@@ -527,7 +621,7 @@ public class EncryptionTestIT extends AbstractIT {
         decryptedFolderMetadata1.setFiledrop(filesdrop);
 
         // encrypt
-        EncryptedFolderMetadata encryptedFolderMetadata1 = encryptFolderMetadata(
+        EncryptedFolderMetadataFile encryptedFolderMetadata1 = encryptFolderMetadata(
             decryptedFolderMetadata1,
             cert,
             arbitraryDataProvider,
@@ -539,9 +633,9 @@ public class EncryptionTestIT extends AbstractIT {
         String encryptedJson = serializeJSON(encryptedFolderMetadata1);
 
         // de-serialize
-        EncryptedFolderMetadata encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
-                                                                           new TypeToken<EncryptedFolderMetadata>() {
-                                                                           });
+        EncryptedFolderMetadataFile encryptedFolderMetadata2 = deserializeJSON(encryptedJson,
+                                                                               new TypeToken<EncryptedFolderMetadataFile>() {
+                                                                               });
 
         // decrypt
         DecryptedFolderMetadata decryptedFolderMetadata2 = decryptFolderMetaData(
@@ -562,19 +656,19 @@ public class EncryptionTestIT extends AbstractIT {
         assertNull(decryptedFolderMetadata2.getFiledrop());
     }
 
-    private void addFile(DecryptedFolderMetadata decryptedFolderMetadata, int counter) {
+    private void addFile(DecryptedFolderMetadataFile decryptedFolderMetadata, int counter) {
         // Add new file
         // Always generate new
         byte[] key = generateKey();
         byte[] iv = randomBytes(ivLength);
         byte[] authTag = randomBytes((128 / 8));
 
-        DecryptedFolderMetadata.Data data = new DecryptedFolderMetadata.Data();
+        Data data = new Data();
         data.setKey(EncryptionUtils.encodeBytesToBase64String(key));
         data.setFilename(counter + ".txt");
         data.setVersion(1);
 
-        DecryptedFolderMetadata.DecryptedFile file = new DecryptedFolderMetadata.DecryptedFile();
+        DecryptedFile file = new DecryptedFile();
         file.setInitializationVector(EncryptionUtils.encodeBytesToBase64String(iv));
         file.setEncrypted(data);
         file.setMetadataKey(0);
@@ -702,7 +796,7 @@ public class EncryptionTestIT extends AbstractIT {
         }
     }
 
-    private DecryptedFolderMetadata generateFolderMetadata() throws Exception {
+    private DecryptedFolderMetadataFile generateFolderMetadataV1_1() throws Exception {
         String metadataKey0 = encodeBytesToBase64String(generateKey());
         String metadataKey1 = encodeBytesToBase64String(generateKey());
         String metadataKey2 = encodeBytesToBase64String(generateKey());
@@ -710,21 +804,21 @@ public class EncryptionTestIT extends AbstractIT {
         metadataKeys.put(0, EncryptionUtils.encryptStringAsymmetric(metadataKey0, cert));
         metadataKeys.put(1, EncryptionUtils.encryptStringAsymmetric(metadataKey1, cert));
         metadataKeys.put(2, EncryptionUtils.encryptStringAsymmetric(metadataKey2, cert));
-        DecryptedFolderMetadata.Encrypted encrypted = new DecryptedFolderMetadata.Encrypted();
+        Encrypted encrypted = new Encrypted();
         encrypted.setMetadataKeys(metadataKeys);
 
-        DecryptedFolderMetadata.Metadata metadata1 = new DecryptedFolderMetadata.Metadata();
+        DecryptedMetadata metadata1 = new DecryptedMetadata();
         metadata1.setMetadataKeys(metadataKeys);
         metadata1.setVersion(1.1);
 
-        HashMap<String, DecryptedFolderMetadata.DecryptedFile> files = new HashMap<>();
+        HashMap<String, DecryptedFile> files = new HashMap<>();
 
-        DecryptedFolderMetadata.Data data1 = new DecryptedFolderMetadata.Data();
+        Data data1 = new Data();
         data1.setKey("WANM0gRv+DhaexIsI0T3Lg==");
         data1.setFilename("test.txt");
         data1.setVersion(1);
 
-        DecryptedFolderMetadata.DecryptedFile file1 = new DecryptedFolderMetadata.DecryptedFile();
+        DecryptedFile file1 = new DecryptedFile();
         file1.setInitializationVector("gKm3n+mJzeY26q4OfuZEqg==");
         file1.setEncrypted(data1);
         file1.setMetadataKey(0);
@@ -732,12 +826,12 @@ public class EncryptionTestIT extends AbstractIT {
 
         files.put("ia7OEEEyXMoRa1QWQk8r", file1);
 
-        DecryptedFolderMetadata.Data data2 = new DecryptedFolderMetadata.Data();
+        Data data2 = new Data();
         data2.setKey("9dfzbIYDt28zTyZfbcll+g==");
         data2.setFilename("test2.txt");
         data2.setVersion(1);
 
-        DecryptedFolderMetadata.DecryptedFile file2 = new DecryptedFolderMetadata.DecryptedFile();
+        DecryptedFile file2 = new DecryptedFile();
         file2.setInitializationVector("hnJLF8uhDvDoFK4ajuvwrg==");
         file2.setEncrypted(data2);
         file2.setMetadataKey(0);
@@ -745,7 +839,61 @@ public class EncryptionTestIT extends AbstractIT {
 
         files.put("n9WXAIXO2wRY4R8nXwmo", file2);
 
-        return new DecryptedFolderMetadata(metadata1, files);
+        return new DecryptedFolderMetadataFile(metadata1, files);
+    }
+
+    private DecryptedFolderMetadataFile generateFolderMetadataV2() throws Exception {
+        String metadataKey0 = encodeBytesToBase64String(generateKey());
+        String metadataKey1 = encodeBytesToBase64String(generateKey());
+        String metadataKey2 = encodeBytesToBase64String(generateKey());
+        HashMap<Integer, String> metadataKeys = new HashMap<>();
+        metadataKeys.put(0, EncryptionUtils.encryptStringAsymmetric(metadataKey0, cert));
+        metadataKeys.put(1, EncryptionUtils.encryptStringAsymmetric(metadataKey1, cert));
+        metadataKeys.put(2, EncryptionUtils.encryptStringAsymmetric(metadataKey2, cert));
+        Encrypted encrypted = new Encrypted();
+        encrypted.setMetadataKeys(metadataKeys);
+
+        DecryptedMetadata metadata1 = new DecryptedMetadata();
+        metadata1.setMetadataKeys(metadataKeys);
+        metadata1.setVersion(1);
+
+        Sharing sharing = new Sharing();
+        sharing.setSignature("HMACOFRECIPIENTANDNEWESTMETADATAKEY");
+        HashMap<String, String> recipient = new HashMap<>();
+        recipient.put("blah@schiessle.org", "PUBLIC KEY");
+        recipient.put("bjoern@schiessle.org", "PUBLIC KEY");
+        sharing.setRecipient(recipient);
+        metadata1.setSharing(sharing);
+
+        HashMap<String, DecryptedFile> files = new HashMap<>();
+
+        Data data1 = new Data();
+        data1.setKey("WANM0gRv+DhaexIsI0T3Lg==");
+        data1.setFilename("test.txt");
+        data1.setVersion(1);
+
+        DecryptedFile file1 = new DecryptedFile();
+        file1.setInitializationVector("gKm3n+mJzeY26q4OfuZEqg==");
+        file1.setEncrypted(data1);
+        file1.setMetadataKey(0);
+        file1.setAuthenticationTag("PboI9tqHHX3QeAA22PIu4w==");
+
+        files.put("ia7OEEEyXMoRa1QWQk8r", file1);
+
+        Data data2 = new Data();
+        data2.setKey("9dfzbIYDt28zTyZfbcll+g==");
+        data2.setFilename("test2.txt");
+        data2.setVersion(1);
+
+        DecryptedFile file2 = new DecryptedFile();
+        file2.setInitializationVector("hnJLF8uhDvDoFK4ajuvwrg==");
+        file2.setEncrypted(data2);
+        file2.setMetadataKey(0);
+        file2.setAuthenticationTag("qOQZdu5soFO77Y7y4rAOVA==");
+
+        files.put("n9WXAIXO2wRY4R8nXwmo", file2);
+
+        return new DecryptedFolderMetadataFile(metadata1, files);
     }
 
     private boolean cryptFile(String fileName, String md5, byte[] key, byte[] iv, byte[] expectedAuthTag)
