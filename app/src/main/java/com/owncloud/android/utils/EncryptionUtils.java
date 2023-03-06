@@ -21,6 +21,7 @@
 
 package com.owncloud.android.utils;
 
+import android.accounts.AccountManager;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -44,6 +45,7 @@ import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFi
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.OwnCloudClient;
+import com.owncloud.android.lib.common.accounts.AccountUtils;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation;
@@ -394,9 +396,13 @@ public final class EncryptionUtils {
                                                                                                                         );
         com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile decryptedFolderMetadata;
         if (v2.getVersion() == 2) {
+            String userId = AccountManager.get(context).getUserData(
+                user.toPlatformAccount(),
+                AccountUtils.Constants.KEY_USER_ID);
+
             decryptedFolderMetadata = encryptionUtilsV2.decryptFolderMetadataFile(
                 v2,
-                user,
+                userId,
                 privateKey);
         } else {
             // try to deserialize v1
@@ -1223,14 +1229,17 @@ public final class EncryptionUtils {
         RemoteOperationResult<String> uploadMetadataOperationResult;
         if (metadataExists) {
             // update metadata
-            UpdateMetadataRemoteOperation storeMetadataOperation = new UpdateMetadataRemoteOperation(
-                parentFile.getLocalId(), serializedFolderMetadata, token);
-            uploadMetadataOperationResult = storeMetadataOperation.execute(client);
+            uploadMetadataOperationResult = new UpdateMetadataRemoteOperation(
+                parentFile.getLocalId(),
+                serializedFolderMetadata,
+                token)
+                .execute(client);
         } else {
             // store metadata
-            StoreMetadataRemoteOperation storeMetadataOperation = new StoreMetadataRemoteOperation(
-                parentFile.getLocalId(), serializedFolderMetadata);
-            uploadMetadataOperationResult = storeMetadataOperation.execute(client);
+            uploadMetadataOperationResult = new StoreMetadataRemoteOperation(
+                parentFile.getLocalId(),
+                serializedFolderMetadata)
+                .execute(client);
         }
 
         if (!uploadMetadataOperationResult.isSuccess()) {
@@ -1363,5 +1372,9 @@ public final class EncryptionUtils {
 
     public static String generateUid() {
         return UUID.randomUUID().toString().replaceAll("-", "");
+    }
+
+    public static String retrievePublicKeyForUser(User user, Context context) {
+        return new ArbitraryDataProviderImpl(context).getValue(user, PUBLIC_KEY);
     }
 }

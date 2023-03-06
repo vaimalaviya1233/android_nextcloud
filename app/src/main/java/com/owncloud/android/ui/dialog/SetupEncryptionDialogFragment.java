@@ -43,11 +43,11 @@ import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.lib.common.accounts.AccountUtils;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.utils.Log_OC;
-import com.owncloud.android.lib.resources.users.DeletePublicKeyOperation;
-import com.owncloud.android.lib.resources.users.GetPrivateKeyOperation;
-import com.owncloud.android.lib.resources.users.GetPublicKeyOperation;
-import com.owncloud.android.lib.resources.users.SendCSROperation;
-import com.owncloud.android.lib.resources.users.StorePrivateKeyOperation;
+import com.owncloud.android.lib.resources.users.DeletePublicKeyRemoteOperation;
+import com.owncloud.android.lib.resources.users.GetPrivateKeyRemoteOperation;
+import com.owncloud.android.lib.resources.users.GetPublicKeyRemoteOperation;
+import com.owncloud.android.lib.resources.users.SendCSRRemoteOperation;
+import com.owncloud.android.lib.resources.users.StorePrivateKeyRemoteOperation;
 import com.owncloud.android.utils.CsrHelper;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.theme.ViewThemeUtils;
@@ -322,10 +322,10 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
             //  - store public key
             //  - decrypt private key, store unencrypted private key in database
 
-            Context context = mWeakContext.get();
-            GetPublicKeyOperation publicKeyOperation = new GetPublicKeyOperation();
+            GetPublicKeyRemoteOperation publicKeyOperation = new GetPublicKeyRemoteOperation();
             if (user != null) {
-                RemoteOperationResult<String> publicKeyResult = publicKeyOperation.executeNextcloudClient(user, context);
+                RemoteOperationResult<String> publicKeyResult = publicKeyOperation.executeNextcloudClient(user,
+                                                                                                      context);
 
                 if (publicKeyResult.isSuccess()) {
                     Log_OC.d(TAG, "public key successful downloaded for " + user.getAccountName());
@@ -343,7 +343,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                 }
 
             RemoteOperationResult<com.owncloud.android.lib.ocs.responses.PrivateKey> privateKeyResult =
-                new GetPrivateKeyOperation().executeNextcloudClient(user, context);
+                new GetPrivateKeyRemoteOperation().executeNextcloudClient(user, context);
 
                 if (privateKeyResult.isSuccess()) {
                     Log_OC.d(TAG, "private key successful downloaded for " + user.getAccountName());
@@ -425,7 +425,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                 String userId = accountManager.getUserData(user.toPlatformAccount(), AccountUtils.Constants.KEY_USER_ID);
                 String urlEncoded = CsrHelper.generateCsrPemEncodedString(keyPair, userId);
 
-                SendCSROperation operation = new SendCSROperation(urlEncoded);
+                SendCSRRemoteOperation operation = new SendCSRRemoteOperation(urlEncoded);
                 RemoteOperationResult<String> result = operation.executeNextcloudClient(user, context);
 
                 if (result.isSuccess()) {
@@ -448,7 +448,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                                                                                generateMnemonicString(false));
 
                 // upload encryptedPrivateKey
-                StorePrivateKeyOperation storePrivateKeyOperation = new StorePrivateKeyOperation(encryptedPrivateKey);
+                StorePrivateKeyRemoteOperation storePrivateKeyOperation = new StorePrivateKeyRemoteOperation(encryptedPrivateKey);
                 RemoteOperationResult<String> storePrivateKeyResult =
                     storePrivateKeyOperation.executeNextcloudClient(user,
                                                                     context);
@@ -469,7 +469,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                     keyResult = KEY_CREATED;
                     return storePrivateKeyResult.getResultData();
                 } else {
-                    new DeletePublicKeyOperation().executeNextcloudClient(user, context);
+                    new DeletePublicKeyRemoteOperation().executeNextcloudClient(user, context);
                 }
             } catch (Exception e) {
                 Log_OC.e(TAG, e.getMessage());
