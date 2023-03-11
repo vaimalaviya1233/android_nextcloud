@@ -338,6 +338,7 @@ public class FileDataStorageManager {
         for (OCFile ocFile : updatedFiles) {
             ContentValues contentValues = createContentValuesForFile(ocFile);
             contentValues.put(ProviderTableMeta.FILE_PARENT, folder.getFileId());
+            contentValues.put(ProviderTableMeta.FILE_E2E_COUNTER, folder.getE2eCounter());
 
             if (fileExists(ocFile.getFileId()) || fileExists(ocFile.getRemotePath())) {
                 long fileId;
@@ -939,6 +940,7 @@ public class FileDataStorageManager {
         ocFile.setLockTimestamp(nullToZero(fileEntity.getLockTimestamp()));
         ocFile.setLockTimeout(nullToZero(fileEntity.getLockTimeout()));
         ocFile.setLockToken(fileEntity.getLockToken());
+        ocFile.setE2eCounter(fileEntity.getE2eCounter());
 
         String sharees = fileEntity.getSharees();
         // Surprisingly JSON deserialization causes significant overhead.

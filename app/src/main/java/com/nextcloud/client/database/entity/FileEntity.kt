@@ -118,6 +118,8 @@ data class FileEntity(
     val lockTimeout: Int?,
     @ColumnInfo(name = ProviderTableMeta.FILE_LOCK_TOKEN)
     val lockToken: String?,
+    @ColumnInfo(name = ProviderTableMeta.FILE_E2E_COUNTER)
+    val e2eCounter: Long?
     @ColumnInfo(name = ProviderTableMeta.FILE_TAGS)
     val tags: String?,
     @ColumnInfo(name = ProviderTableMeta.FILE_METADATA_GPS)
