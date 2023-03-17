@@ -614,7 +614,8 @@ public final class EncryptionUtils {
         byte[] bytes = decodeStringToBase64Bytes(string);
         byte[] encodedBytes = cipher.doFinal(bytes);
 
-        return decodeBase64BytesToString(encodedBytes);
+        // return decodeBase64BytesToString(encodedBytes);
+        return encodeBytesToBase64String(encodedBytes);
     }
 
     /**
@@ -839,7 +840,7 @@ public final class EncryptionUtils {
         throws NoSuchAlgorithmException,
         InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException,
         BadPaddingException, IllegalBlockSizeException {
-        byte[] decryptedBytes = decryptStringSymmetric(string, encryptionKeyBytes, null);
+        byte[] decryptedBytes = decryptStringSymmetric(string, encryptionKeyBytes, null, null);
         return decodeBase64BytesToString(decryptedBytes);
     }
 
@@ -853,25 +854,26 @@ public final class EncryptionUtils {
      */
     public static byte[] decryptStringSymmetric(String string,
                                                 byte[] encryptionKeyBytes,
-                                                String authenticationTag)
+                                                String authenticationTag,
+                                                String ivString)
         throws NoSuchAlgorithmException,
         InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException,
         BadPaddingException, IllegalBlockSizeException {
 
         Cipher cipher = Cipher.getInstance(AES_CIPHER);
 
-        String ivString;
-        int delimiterPosition = string.lastIndexOf(ivDelimiter);
+//        String ivString;
+//        int delimiterPosition = string.lastIndexOf(ivDelimiter);
 
-        if (delimiterPosition == -1) {
-            // backward compatibility
-            delimiterPosition = string.lastIndexOf(ivDelimiterOld);
-            ivString = string.substring(delimiterPosition + ivDelimiterOld.length());
-        } else {
-            ivString = string.substring(delimiterPosition + ivDelimiter.length());
-        }
-
-        String cipherString = string.substring(0, delimiterPosition);
+//        if (delimiterPosition == -1) {
+//            // backward compatibility
+//            delimiterPosition = string.lastIndexOf(ivDelimiterOld);
+//            ivString = string.substring(delimiterPosition + ivDelimiterOld.length());
+//        } else {
+//            ivString = string.substring(delimiterPosition + ivDelimiter.length());
+//        }
+//
+//        String cipherString = string.substring(0, delimiterPosition);
 
         byte[] iv = new IvParameterSpec(decodeStringToBase64Bytes(ivString)).getIV();
 
@@ -886,7 +888,7 @@ public final class EncryptionUtils {
         GCMParameterSpec spec = new GCMParameterSpec(128, iv);
         cipher.init(Cipher.DECRYPT_MODE, key, spec);
 
-        byte[] bytes = decodeStringToBase64Bytes(cipherString);
+        byte[] bytes = decodeStringToBase64Bytes(string);
 
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
