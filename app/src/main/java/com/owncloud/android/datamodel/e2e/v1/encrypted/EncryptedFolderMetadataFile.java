@@ -22,6 +22,7 @@
 
 package com.owncloud.android.datamodel.e2e.v1.encrypted;
 
+import com.owncloud.android.datamodel.EncryptedFiledrop;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
 
 import java.util.Map;
@@ -35,9 +36,9 @@ public class EncryptedFolderMetadataFile {
 
     private Map<String, EncryptedFiledrop> filedrop;
 
-    public EncryptedFolderMetadata(DecryptedFolderMetadata.Metadata metadata,
-                                   Map<String, EncryptedFile> files,
-                                   Map<String, EncryptedFiledrop> filesdrop) {
+    public EncryptedFolderMetadataFile(DecryptedMetadata metadata,
+                                       Map<String, EncryptedFile> files,
+                                       Map<String, EncryptedFiledrop> filesdrop) {
         this.metadata = metadata;
         this.files = files;
         this.filedrop = filesdrop;

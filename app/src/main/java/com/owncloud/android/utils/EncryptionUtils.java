@@ -35,7 +35,6 @@ import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.datamodel.DecryptedFolderMetadata;
 import com.owncloud.android.datamodel.EncryptedFiledrop;
-import com.owncloud.android.datamodel.EncryptedFolderMetadata;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
@@ -46,7 +45,9 @@ import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.LockFileRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.StoreMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UnlockFileRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.UpdateMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.status.NextcloudVersion;
 import com.owncloud.android.operations.UploadException;
 
@@ -305,8 +306,7 @@ public final class EncryptionUtils {
 
                 files.put(key, decryptedFile);
             }
-        }
-
+        
         // verify checksum
         String mnemonic = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.MNEMONIC);
         String checksum = EncryptionUtils.generateChecksum(decryptedFolderMetadata, mnemonic);
@@ -697,22 +697,6 @@ public final class EncryptionUtils {
         return encodedCryptedBytes + delimiter + encodedIV;
     }
 
-    /**
-     * Encrypt string with AES/GCM/NoPadding
-     *
-     * @param gzip               gzipped byte array
-     * @param encryptionKeyBytes key from metadata
-     * @return decrypted string
-     */
-    public static Triple<String, String, String> encryptStringSymmetricWithIVandAuthTag(
-        byte[] gzip,
-        byte[] encryptionKeyBytes)
-        throws NoSuchAlgorithmException,
-        InvalidAlgorithmParameterException,
-        NoSuchPaddingException,
-        InvalidKeyException,
-        BadPaddingException,
-        IllegalBlockSizeException {
     public static String decryptStringSymmetric(String string,
                                                 byte[] encryptionKeyBytes,
                                                 byte[] iv,
