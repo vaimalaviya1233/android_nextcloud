@@ -24,6 +24,7 @@ package com.owncloud.android.utils;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.util.Pair;
 
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
@@ -33,7 +34,6 @@ import com.nextcloud.client.account.User;
 import com.owncloud.android.R;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
-import com.owncloud.android.datamodel.DecryptedFolderMetadata;
 import com.owncloud.android.datamodel.EncryptedFiledrop;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
@@ -127,8 +127,6 @@ public final class EncryptionUtils {
     private static final String AES = "AES";
     public static final String RSA_CIPHER = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding";
     public static final String RSA = "RSA";
-    private static final String RSA_CIPHER = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding";
-    private static final String RSA = "RSA";
     @VisibleForTesting
     public static final String MIGRATED_FOLDER_IDS = "MIGRATED_FOLDER_IDS";
 

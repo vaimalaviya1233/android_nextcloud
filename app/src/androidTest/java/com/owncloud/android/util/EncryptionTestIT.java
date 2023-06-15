@@ -28,6 +28,11 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nextcloud.test.RandomStringGenerator;
 import com.nextcloud.test.RetryTestRule;
+import com.owncloud.android.AbstractIT;
+import com.owncloud.android.datamodel.ArbitraryDataProvider;
+import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
+import com.owncloud.android.datamodel.DecryptedFolderMetadata;
+import com.owncloud.android.datamodel.EncryptedFolderMetadata;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile;
@@ -35,12 +40,8 @@ import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Encrypted;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Sharing;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
-import com.owncloud.android.AbstractIT;
-import com.owncloud.android.datamodel.ArbitraryDataProvider;
-import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
-import com.owncloud.android.datamodel.DecryptedFolderMetadata;
-import com.owncloud.android.datamodel.EncryptedFolderMetadata;
 import com.owncloud.android.lib.common.utils.Log_OC;
+import com.owncloud.android.operations.RemoveRemoteEncryptedFileOperation;
 import com.owncloud.android.utils.CsrHelper;
 import com.owncloud.android.utils.EncryptionUtils;
 
@@ -71,6 +72,7 @@ import java.util.Set;
 import javax.crypto.BadPaddingException;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import kotlin.NotImplementedError;
 
 import static com.owncloud.android.utils.EncryptionUtils.EncryptedFile;
 import static com.owncloud.android.utils.EncryptionUtils.decodeStringToBase64Bytes;
@@ -778,6 +780,12 @@ public class EncryptionTestIT extends AbstractIT {
         EncryptionUtils.addIdToMigratedIds(id, user, arbitraryDataProvider);
 
         assertTrue(isFolderMigrated(id, user, arbitraryDataProvider));
+    }
+    
+    @Test
+    public void testRemoveEncryptedFile() {
+        // test RemoveRemoteEncryptedFileOperation
+        throw new NotImplementedError();
     }
 
 

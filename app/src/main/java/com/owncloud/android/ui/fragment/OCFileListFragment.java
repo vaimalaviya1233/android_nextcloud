@@ -71,12 +71,12 @@ import com.nextcloud.utils.view.FastScrollUtils;
 import com.owncloud.android.MainApp;
 import com.owncloud.android.R;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
-import com.owncloud.android.datamodel.DecryptedFolderMetadata;
-import com.owncloud.android.datamodel.EncryptedFolderMetadata;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.SyncedFolderProvider;
 import com.owncloud.android.datamodel.VirtualFolderType;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.Creator;
 import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
@@ -1747,21 +1747,21 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 String token = EncryptionUtils.lockFolder(folder, client);
 
                 // Update metadata
-                Pair<Boolean, DecryptedFolderMetadata> metadataPair = EncryptionUtils.retrieveMetadata(folder,
-                                                                                                       client,
-                                                                                                       privateKey,
-                                                                                                       publicKey,
-                                                                                                       arbitraryDataProvider,
-                                                                                                       user);
+                Pair<Boolean, DecryptedFolderMetadataFile> metadataPair = EncryptionUtils.retrieveMetadata(folder,
+                                                                                                           client,
+                                                                                                           privateKey,
+                                                                                                           publicKey,
+                                                                                                           arbitraryDataProvider,
+                                                                                                           user);
 
                 boolean metadataExists = metadataPair.first;
-                DecryptedFolderMetadata metadata = metadataPair.second;
+                DecryptedFolderMetadataFile metadata = metadataPair.second;
 
-                EncryptedFolderMetadata encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(metadata,
-                                                                                                        publicKey,
-                                                                                                        arbitraryDataProvider,
-                                                                                                        user,
-                                                                                                        folder.getLocalId());
+                EncryptedFolderMetadataFile encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(metadata,
+                                                                                                            publicKey,
+                                                                                                            arbitraryDataProvider,
+                                                                                                            user,
+                                                                                                            folder.getLocalId());
 
                 String serializedFolderMetadata;
 

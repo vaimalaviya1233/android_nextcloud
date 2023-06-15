@@ -121,7 +121,7 @@ data class FileEntity(
     @ColumnInfo(name = ProviderTableMeta.FILE_TAGS)
     val tags: String?,
     @ColumnInfo(name = ProviderTableMeta.FILE_METADATA_GPS)
-    val metadataGPS: String?
-    // @ColumnInfo(name = ProviderTableMeta.FILE_E2E_COUNTER)
-    // val e2eCounter: Long?
+    val metadataGPS: String?,
+    @ColumnInfo(name = ProviderTableMeta.FILE_E2E_COUNTER)
+    val e2eCounter: Long?
 )

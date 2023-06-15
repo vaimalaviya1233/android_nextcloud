@@ -24,6 +24,8 @@ package com.owncloud.android.operations;
 import android.content.Context;
 
 import com.nextcloud.client.account.User;
+import com.owncloud.android.datamodel.ArbitraryDataProvider;
+import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
@@ -53,6 +55,7 @@ public class RemoveRemoteEncryptedFileOperation extends RemoteOperation<Void> {
     private final String fileName;
     private final Context context;
     private final boolean isFolder;
+    private final ArbitraryDataProvider arbitraryDataProvider;
 
     /**
      * Constructor
@@ -72,6 +75,8 @@ public class RemoveRemoteEncryptedFileOperation extends RemoteOperation<Void> {
         this.context = context;
         this.parentFolder = parentFolder;
         this.isFolder = isFolder;
+
+        arbitraryDataProvider = new ArbitraryDataProviderImpl(context);
     }
 
     /**
@@ -82,7 +87,6 @@ public class RemoveRemoteEncryptedFileOperation extends RemoteOperation<Void> {
         RemoteOperationResult<Void> result;
         DeleteMethod delete = null;
         String token = null;
-        DecryptedFolderMetadataFile metadata;
 
         String privateKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PRIVATE_KEY);
         String publicKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PUBLIC_KEY);
