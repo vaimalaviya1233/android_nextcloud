@@ -22,15 +22,19 @@
 
 package com.owncloud.android.utils
 
+import com.google.gson.reflect.TypeToken
 import com.nextcloud.client.account.MockUser
 import com.nextcloud.common.User
 import com.owncloud.android.AbstractIT
 import com.owncloud.android.datamodel.OCFile
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Data
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedMetadata
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedUser
+import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile
+import com.owncloud.android.util.EncryptionTestIT
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert.assertNotEquals
@@ -188,9 +192,44 @@ class EncryptionUtilsV2IT : AbstractIT() {
     }
 
     @Test
+    fun temp() {
+        val string = "123"
+        val metadataKey = EncryptionUtils.generateKeyString()
+
+        val e = EncryptionUtils.encryptStringSymmetricAsString(
+            string,
+            metadataKey.toByteArray()
+        )
+
+        val d = EncryptionUtils.decryptStringSymmetric(e, metadataKey.toByteArray())
+        assertEquals(string, d)
+
+        val encryptedMetadata = EncryptionUtils.encryptStringSymmetric(
+            string,
+            metadataKey.toByteArray(),
+            EncryptionUtils.ivDelimiter
+        )
+
+        val d2 = EncryptionUtils.decryptStringSymmetric(
+            encryptedMetadata.ciphertext, 
+            metadataKey.toByteArray()
+        )
+        assertEquals(string, d2)
+
+        val decrypted = EncryptionUtils.decryptStringSymmetric(
+            encryptedMetadata.ciphertext,
+            metadataKey.toByteArray(),
+            encryptedMetadata.authenticationTag,
+            encryptedMetadata.nonce,
+        )
+
+        assertEquals(string, EncryptionUtils.decodeBase64BytesToString(decrypted))
+    }
+
+    @Test
     fun testEncryptDecryptUser() {
         val encryptionUtilsV2 = EncryptionUtilsV2()
-        val metadataKey = EncryptionUtils.generateKeyString()
+        val metadataKey = EncryptionUtils.generateKeyString() // base64
         val user = DecryptedUser("enc1", enc1Cert)
 
         val encryptedUser = encryptionUtilsV2.encryptUser(user, metadataKey)
@@ -295,7 +334,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
-        assertEquals(0, metadataFile.metadata.folders.size)
+        assertEquals(3, metadataFile.metadata.folders.size)
 
         val updatedMetadata = encryptionUtilsV2.addFolderToMetadata(
             EncryptionUtils.generateUid(),
@@ -304,7 +343,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         )
 
         assertEquals(2, updatedMetadata.metadata.files.size)
-        assertEquals(1, updatedMetadata.metadata.folders.size)
+        assertEquals(4, updatedMetadata.metadata.folders.size)
     }
 
     @Test
@@ -314,7 +353,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
-        assertEquals(0, metadataFile.metadata.folders.size)
+        assertEquals(3, metadataFile.metadata.folders.size)
 
         val encryptedFileName = EncryptionUtils.generateUid()
         var updatedMetadata = encryptionUtilsV2.addFolderToMetadata(
@@ -324,7 +363,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         )
 
         assertEquals(2, updatedMetadata.metadata.files.size)
-        assertEquals(1, updatedMetadata.metadata.folders.size)
+        assertEquals(4, updatedMetadata.metadata.folders.size)
 
         updatedMetadata = encryptionUtilsV2.removeFolderFromMetadata(
             encryptedFileName,
@@ -332,7 +371,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         )
 
         assertEquals(2, updatedMetadata.metadata.files.size)
-        assertEquals(0, updatedMetadata.metadata.folders.size)
+        assertEquals(3, updatedMetadata.metadata.folders.size)
     }
 
     @Test
@@ -371,13 +410,13 @@ class EncryptionUtilsV2IT : AbstractIT() {
         assertEquals(v1.encrypted.filename, v2.filename)
         assertEquals(v1.encrypted.mimetype, v2.mimetype)
         assertEquals(v1.authenticationTag, v2.authenticationTag)
-        assertEquals(v1.initializationVector, v2.initializationVector)
+        assertEquals(v1.initializationVector, v2.nonce)
         assertEquals(v1.encrypted.key, v2.key)
     }
 
     @Test
     fun testMigrateMetadataV1ToV2() {
-        val v1 = com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile().apply {
+        val v1 = DecryptedFolderMetadataFileV1().apply {
             metadata = com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata().apply {
                 metadataKeys = mapOf(Pair(0, EncryptionUtils.generateKeyString()))
             }
@@ -578,5 +617,104 @@ class EncryptionUtilsV2IT : AbstractIT() {
         )
         assertTrue(encryptionUtilsV2.verifySignedMessage(signed, certs))
         assertTrue(encryptionUtilsV2.verifySignedMessage(base64Ans, json, certs))
+    }
+
+    /**
+     * DecryptedFolderMetadata -> EncryptedFolderMetadata -> JSON -> encrypt -> decrypt -> JSON ->
+     * EncryptedFolderMetadata -> DecryptedFolderMetadata
+     */
+    @Test
+    @Throws(Exception::class)
+    fun encryptionMetadataV2() {
+        val encryptionUtilsV2 = EncryptionUtilsV2()
+        val decryptedFolderMetadata1: DecryptedFolderMetadataFile = generateFolderMetadataV2()
+        val root = OCFile("/")
+        root.localId = 0
+        val folder = OCFile("/enc")
+        folder.localId = 1
+        folder.parentId = 0
+
+        // encrypt
+        val encryptedFolderMetadata1 = encryptionUtilsV2.encryptFolderMetadataFile(
+            decryptedFolderMetadata1,
+            folder,
+            fileDataStorageManager,
+            client,
+            client.userId,
+            EncryptionTestIT.privateKey
+        )
+
+        // serialize
+        val encryptedJson = EncryptionUtils.serializeJSON(encryptedFolderMetadata1)
+
+        // de-serialize
+        val encryptedFolderMetadata2 = EncryptionUtils.deserializeJSON(encryptedJson,
+            object : TypeToken<EncryptedFolderMetadataFile?>() {})
+
+        // decrypt
+        val decryptedFolderMetadata2 = EncryptionUtilsV2().decryptFolderMetadataFile(
+            encryptedFolderMetadata2!!,
+            getUserId(user),
+            EncryptionTestIT.privateKey,
+            folder,
+            fileDataStorageManager,
+            client
+        )
+
+        // compare
+        assertTrue(
+            EncryptionTestIT.compareJsonStrings(
+                EncryptionUtils.serializeJSON(decryptedFolderMetadata1),
+                EncryptionUtils.serializeJSON(decryptedFolderMetadata2)
+            )
+        )
+    }
+
+    @Throws(java.lang.Exception::class)
+    private fun generateFolderMetadataV2(): DecryptedFolderMetadataFile {
+        var metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey())
+        val encryptedMetadataKey: String =
+            EncryptionUtils.encryptStringAsymmetric(metadataKey, EncryptionTestIT.publicKey)
+
+        val metadata = DecryptedMetadata().apply {
+            metadataKey = encryptedMetadataKey
+        }
+
+        val file1 = DecryptedFile(
+            "image1.png",
+            "image/png",
+            "gKm3n+mJzeY26q4OfuZEqg==",
+            "PboI9tqHHX3QeAA22PIu4w==",
+            "WANM0gRv+DhaexIsI0T3Lg=="
+        )
+
+        val file2 = DecryptedFile(
+            "image2.png",
+            "image/png",
+            "hnJLF8uhDvDoFK4ajuvwrg==",
+            "qOQZdu5soFO77Y7y4rAOVA==",
+            "9dfzbIYDt28zTyZfbcll+g=="
+        )
+
+        val users = mutableListOf(
+            DecryptedUser(client.userId, EncryptionTestIT.publicKey)
+        )
+
+        val filedrop: Map<String, DecryptedFile> = mapOf(
+            Pair(
+                "eie8iaeiaes8e87td6", DecryptedFile(
+                    "test2.txt",
+                    "txt/plain",
+                    "hnJLF8uhDvDoFK4ajuvwrg==",
+                    "qOQZdu5soFO77Y7y4rAOVA==",
+                    "9dfzbIYDt28zTyZfbcll+g=="
+                )
+            )
+        )
+
+        metadata.files["ia7OEEEyXMoRa1QWQk8r"] = file1
+        metadata.files["n9WXAIXO2wRY4R8nXwmo"] = file2
+
+        return DecryptedFolderMetadataFile(metadata, users, filedrop, 2)
     }
 }

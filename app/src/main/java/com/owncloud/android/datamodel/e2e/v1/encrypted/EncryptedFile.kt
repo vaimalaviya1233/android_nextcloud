@@ -19,12 +19,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-package com.owncloud.android.datamodel.e2e.v2.decrypted
+package com.owncloud.android.datamodel.e2e.v1.encrypted
 
-data class DecryptedFile(
-    var filename: String,
-    val mimetype: String,
-    val nonce: String,
-    val authenticationTag: String,
-    val key: String
-)
+class EncryptedFile(var encryptedBytes: ByteArray, var authenticationTag: String)

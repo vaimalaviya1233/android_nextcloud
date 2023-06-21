@@ -35,6 +35,7 @@ import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.ThumbnailsCacheManager;
 import com.owncloud.android.datamodel.UploadsStorageManager;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.db.OCUpload;
@@ -502,7 +503,7 @@ public class UploadFileOperation extends SyncOperation {
             // IV, always generate new one
             byte[] iv = EncryptionUtils.randomBytes(EncryptionUtils.ivLength);
 
-            EncryptionUtils.EncryptedFile encryptedFile = EncryptionUtils.encryptFile(mFile, key, iv);
+            EncryptedFile encryptedFile = EncryptionUtils.encryptFile(mFile, key, iv);
 
             // new random file name, check if it exists in metadata
             String encryptedFileName = EncryptionUtils.generateUid();
@@ -513,7 +514,7 @@ public class UploadFileOperation extends SyncOperation {
 
             File encryptedTempFile = File.createTempFile("encFile", encryptedFileName);
             FileOutputStream fileOutputStream = new FileOutputStream(encryptedTempFile);
-            fileOutputStream.write(encryptedFile.encryptedBytes);
+            fileOutputStream.write(encryptedFile.getEncryptedBytes());
             fileOutputStream.close();
 
             /***** E2E *****/
@@ -614,7 +615,7 @@ public class UploadFileOperation extends SyncOperation {
                     encryptedFileName,
                     mFile,
                     iv,
-                    encryptedFile.authenticationTag,
+                    encryptedFile.getAuthenticationTag(),
                     key,
                     metadata);
                 

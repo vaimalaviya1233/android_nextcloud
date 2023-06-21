@@ -75,8 +75,9 @@ import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.SyncedFolderProvider;
 import com.owncloud.android.datamodel.VirtualFolderType;
-import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile;
-import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1;
+import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.Creator;
 import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
@@ -114,6 +115,7 @@ import com.owncloud.android.ui.preview.PreviewMediaFragment;
 import com.owncloud.android.ui.preview.PreviewTextFileFragment;
 import com.owncloud.android.utils.DisplayUtils;
 import com.owncloud.android.utils.EncryptionUtils;
+import com.owncloud.android.utils.EncryptionUtilsV2;
 import com.owncloud.android.utils.FileSortOrder;
 import com.owncloud.android.utils.FileStorageUtils;
 import com.owncloud.android.utils.MimeTypeUtil;
@@ -1723,7 +1725,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
                           event.remotePath,
                           event.shouldBeEncrypted,
                           publicKey,
-                          privateKey);
+                          privateKey,
+                          storageManager);
         }
     }
 
@@ -1733,7 +1736,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                String remotePath,
                                boolean shouldBeEncrypted,
                                String publicKey,
-                               String privateKey) {
+                               String privateKey,
+                               FileDataStorageManager storageManager) {
         try {
             User user = accountManager.getUser();
             OwnCloudClient client = clientFactory.create(user);
@@ -1751,17 +1755,18 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                                                                                            client,
                                                                                                            privateKey,
                                                                                                            publicKey,
-                                                                                                           arbitraryDataProvider,
-                                                                                                           user);
+                                                                                                           storageManager);
 
                 boolean metadataExists = metadataPair.first;
                 DecryptedFolderMetadataFile metadata = metadataPair.second;
 
-                EncryptedFolderMetadataFile encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(metadata,
-                                                                                                            publicKey,
-                                                                                                            arbitraryDataProvider,
-                                                                                                            user,
-                                                                                                            folder.getLocalId());
+                EncryptedFolderMetadataFile encryptedFolderMetadata = new EncryptionUtilsV2()
+                    .encryptFolderMetadataFile(metadata,
+                                               folder,
+                                               mContainerActivity.getStorageManager(),
+                                               client,
+                                               client.getUserId(),
+                                               privateKey);
 
                 String serializedFolderMetadata;
 

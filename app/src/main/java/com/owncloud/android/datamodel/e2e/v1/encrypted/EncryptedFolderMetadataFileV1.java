@@ -30,15 +30,15 @@ import java.util.Map;
 /**
  * Encrypted class representation of metadata json of folder metadata
  */
-public class EncryptedFolderMetadataFile {
+public class EncryptedFolderMetadataFileV1 {
     private DecryptedMetadata metadata;
     private Map<String, EncryptedFile> files;
 
     private Map<String, EncryptedFiledrop> filedrop;
 
-    public EncryptedFolderMetadataFile(DecryptedMetadata metadata,
-                                       Map<String, EncryptedFile> files,
-                                       Map<String, EncryptedFiledrop> filesdrop) {
+    public EncryptedFolderMetadataFileV1(DecryptedMetadata metadata,
+                                         Map<String, EncryptedFile> files,
+                                         Map<String, EncryptedFiledrop> filesdrop) {
         this.metadata = metadata;
         this.files = files;
         this.filedrop = filesdrop;

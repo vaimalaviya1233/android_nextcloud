@@ -216,7 +216,7 @@ public class DownloadFileOperation extends RemoteOperation {
                 }
 
                 byte[] key = decodeStringToBase64Bytes(decryptedFile.getKey());
-                byte[] iv = decodeStringToBase64Bytes(decryptedFile.getInitializationVector());
+                byte[] iv = decodeStringToBase64Bytes(decryptedFile.getNonce());
                 byte[] authenticationTag = decodeStringToBase64Bytes(decryptedFile.getAuthenticationTag());
 
                 try {

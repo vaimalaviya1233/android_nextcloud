@@ -25,9 +25,11 @@ package com.owncloud.android.datamodel.e2e.v1.decrypted;
 import java.util.Map;
 
 public class DecryptedMetadata {
-    private Map<Integer, String> metadataKeys; // each keys is encrypted on its own, decrypt on use
-    private Sharing sharing;
-    private int version;
+    transient
+    private Map<Integer, String> metadataKeys; // outdated with v1.1
+    private String metadataKey;
+    private String checksum;
+    private double version = 1.2;
 
     @Override
     public String toString() {
@@ -38,11 +40,15 @@ public class DecryptedMetadata {
         return this.metadataKeys;
     }
 
-    public Sharing getSharing() {
-        return this.sharing;
+    public String getMetadataKey() {
+        if (metadataKey == null) {
+            // fallback to old keys array
+            return metadataKeys.get(0);
+        }
+        return metadataKey;
     }
 
-    public int getVersion() {
+    public double getVersion() {
         return this.version;
     }
 
@@ -50,11 +56,19 @@ public class DecryptedMetadata {
         this.metadataKeys = metadataKeys;
     }
 
-    public void setSharing(Sharing sharing) {
-        this.sharing = sharing;
+    public void setMetadataKey(String metadataKey) {
+        this.metadataKey = metadataKey;
     }
 
     public void setVersion(int version) {
         this.version = version;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public void setChecksum(String checksum) {
+        this.checksum = checksum;
     }
 }

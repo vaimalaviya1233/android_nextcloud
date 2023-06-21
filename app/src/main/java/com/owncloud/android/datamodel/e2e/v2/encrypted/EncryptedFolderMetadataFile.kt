@@ -21,7 +21,7 @@
  */
 package com.owncloud.android.datamodel.e2e.v2.encrypted
 
-import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1
 
 /**
  * Decrypted class representation of metadata json of folder metadata.
@@ -29,6 +29,6 @@ import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFi
 data class EncryptedFolderMetadataFile(
     val metadata: EncryptedMetadata,
     val users: List<EncryptedUser>,
-    val filedrop: Map<String, EncryptedFolderMetadataFile.EncryptedFile>,
+    val filedrop: Map<String, EncryptedFolderMetadataFileV1.EncryptedFile>,
     val version: Int = 2
 )

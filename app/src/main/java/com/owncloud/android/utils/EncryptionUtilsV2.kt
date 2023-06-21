@@ -31,6 +31,8 @@ import com.owncloud.android.datamodel.ArbitraryDataProvider
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl
 import com.owncloud.android.datamodel.FileDataStorageManager
 import com.owncloud.android.datamodel.OCFile
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedMetadata
@@ -71,19 +73,19 @@ class EncryptionUtilsV2 {
     fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: String): EncryptedMetadata {
         val json = EncryptionUtils.serializeJSON(metadata)
         val gzip = gZipCompress(json)
-        val encryptedData = EncryptionUtils.encryptStringSymmetricWithIVandAuthTag(
+        
+        return EncryptionUtils.encryptStringSymmetric(
             gzip,
-            metadataKey.toByteArray()
+            metadataKey.toByteArray(),
+            EncryptionUtils.ivDelimiter
         )
-
-        return EncryptedMetadata(encryptedData.first, encryptedData.second, encryptedData.third)
     }
 
     @VisibleForTesting
     fun decryptMetadata(metadata: EncryptedMetadata, metadataKey: String): DecryptedMetadata {
         val decrypted = EncryptionUtils.decryptStringSymmetric(
             metadata.ciphertext,
-            EncryptionUtils.decodeStringToBase64Bytes(metadataKey),
+            metadataKey.toByteArray(),
             metadata.authenticationTag,
             metadata.nonce
         )
@@ -268,7 +270,6 @@ class EncryptionUtilsV2 {
         )
     }
 
-    @VisibleForTesting
     fun gZipCompress(string: String): ByteArray {
         val outputStream = ByteArrayOutputStream()
         GZIPOutputStream(outputStream).apply {
@@ -473,13 +474,16 @@ class EncryptionUtilsV2 {
             // try to deserialize v1
             val v1 = EncryptionUtils.deserializeJSON(
                 serializedEncryptedMetadata,
-                object : TypeToken<com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFile?>() {}
+                object : TypeToken<EncryptedFolderMetadataFileV1?>() {}
             )
 
             // decrypt
             try {
                 // decrypt metadata
-                val decryptedV1 = EncryptionUtils.decryptFolderMetaData(v1, privateKey)
+                val decryptedV1 = EncryptionUtils.decryptFolderMetaData(
+                    v1,
+                    privateKey, arbitraryDataProvider, user, folder.localId
+                )
                 val publicKey: String = arbitraryDataProvider.getValue(
                     user.accountName,
                     EncryptionUtils.PUBLIC_KEY
@@ -497,7 +501,7 @@ class EncryptionUtilsV2 {
             }
         }
 
-        // verify metadata
+        // TODO verify metadata
         // if (!verifyMetadata(decryptedFolderMetadata)) {
         //     throw IllegalStateException("Metadata is corrupt!")
         // }
@@ -553,11 +557,39 @@ class EncryptionUtilsV2 {
 //            Log_OC.e(TAG, e.getMessage());
 //            return null;
 //        }
+
+        // TODO to check
+//                try {
+//                    int filesDropCountBefore = 0;
+//                    if (encryptedFolderMetadata.getFiledrop() != null) {
+//                        filesDropCountBefore = encryptedFolderMetadata.getFiledrop().size();
+//                    }
+//                    DecryptedFolderMetadataFile decryptedFolderMetadata = EncryptionUtils.decryptFolderMetaData(
+//                        encryptedFolderMetadata,
+//                        privateKey,
+//                        arbitraryDataProvider,
+//                        user,
+//                        folder.getLocalId());
+//
+//                    boolean transferredFiledrop = filesDropCountBefore > 0 && decryptedFolderMetadata.getFiles().size() ==
+//                        encryptedFolderMetadata.getFiles().size() + filesDropCountBefore;
+//
+//                    if (transferredFiledrop) {
+//                        // lock folder
+//                        String token = EncryptionUtils.lockFolder(folder, client);
+//
+//                        // upload metadata
+//                        EncryptedFolderMetadata encryptedFolderMetadataNew = encryptFolderMetadata(decryptedFolderMetadata,
+//                                                                                                   publicKey,
+//                                                                                                   arbitraryDataProvider,
+//                                                                                                   user,
+//                                                                                                   folder.getLocalId());
+//
     }
 
     @Throws(IllegalStateException::class)
     fun migrateV1ToV2(
-        v1: com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFile,
+        v1: DecryptedFolderMetadataFileV1,
         userId: String,
         cert: String
     ): DecryptedFolderMetadataFile {
