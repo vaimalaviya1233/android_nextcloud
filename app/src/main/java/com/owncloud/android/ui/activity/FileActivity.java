@@ -84,6 +84,7 @@ import com.owncloud.android.services.OperationsService;
 import com.owncloud.android.services.OperationsService.OperationsServiceBinder;
 import com.owncloud.android.ui.asynctasks.CheckRemoteWipeTask;
 import com.owncloud.android.ui.asynctasks.LoadingVersionNumberTask;
+import com.owncloud.android.ui.asynctasks.SecureShareTask;
 import com.owncloud.android.ui.dialog.ConfirmationDialogFragment;
 import com.owncloud.android.ui.dialog.LoadingDialog;
 import com.owncloud.android.ui.dialog.ShareLinkToDialog;
@@ -182,6 +183,9 @@ public abstract class FileActivity extends DrawerActivity
 
     @Inject
     UsersAndGroupsSearchConfig usersAndGroupsSearchConfig;
+
+    @Inject
+    ArbitraryDataProvider arbitraryDataProvider;
 
     @Override
     public void showFiles(boolean onDeviceOnly) {
@@ -901,9 +905,20 @@ public abstract class FileActivity extends DrawerActivity
      * @param shareType
      */
     protected void doShareWith(String shareeName, ShareType shareType) {
-        FileDetailFragment fragment = getFileDetailFragment();
-        if (fragment != null) {
-            fragment.initiateSharingProcess(shareeName, shareType);
+        if (usersAndGroupsSearchConfig.getSearchOnlyUsers()) {
+            new SecureShareTask(accountManager.getUser(),
+                                clientFactory,
+                                shareeName,
+                                arbitraryDataProvider,
+                                mFileOperationsHelper,
+                                getFile(),
+                                new WeakReference<>(this))
+                .execute();
+        } else {
+            FileDetailFragment fragment = getFileDetailFragment();
+            if (fragment != null) {
+                fragment.initiateSharingProcess(shareeName, shareType);
+            }
         }
     }
 

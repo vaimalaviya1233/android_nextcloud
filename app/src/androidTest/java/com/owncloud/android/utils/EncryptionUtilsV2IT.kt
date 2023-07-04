@@ -211,7 +211,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         )
 
         val d2 = EncryptionUtils.decryptStringSymmetric(
-            encryptedMetadata.ciphertext, 
+            encryptedMetadata.ciphertext,
             metadataKey.toByteArray()
         )
         assertEquals(string, d2)
@@ -220,7 +220,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
             encryptedMetadata.ciphertext,
             metadataKey.toByteArray(),
             encryptedMetadata.authenticationTag,
-            encryptedMetadata.nonce,
+            encryptedMetadata.nonce
         )
 
         assertEquals(string, EncryptionUtils.decodeBase64BytesToString(decrypted))
@@ -386,7 +386,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
 
-        assertTrue(encryptionUtilsV2.verifyMetadata(metadataFile))
+        assertTrue(encryptionUtilsV2.verifyMetadata(metadataFile, 0, ""))
     }
 
     private fun generateDecryptedFileV1(): com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile {
@@ -648,8 +648,10 @@ class EncryptionUtilsV2IT : AbstractIT() {
         val encryptedJson = EncryptionUtils.serializeJSON(encryptedFolderMetadata1)
 
         // de-serialize
-        val encryptedFolderMetadata2 = EncryptionUtils.deserializeJSON(encryptedJson,
-            object : TypeToken<EncryptedFolderMetadataFile?>() {})
+        val encryptedFolderMetadata2 = EncryptionUtils.deserializeJSON(
+            encryptedJson,
+            object : TypeToken<EncryptedFolderMetadataFile?>() {}
+        )
 
         // decrypt
         val decryptedFolderMetadata2 = EncryptionUtilsV2().decryptFolderMetadataFile(
@@ -702,7 +704,8 @@ class EncryptionUtilsV2IT : AbstractIT() {
 
         val filedrop: Map<String, DecryptedFile> = mapOf(
             Pair(
-                "eie8iaeiaes8e87td6", DecryptedFile(
+                "eie8iaeiaes8e87td6",
+                DecryptedFile(
                     "test2.txt",
                     "txt/plain",
                     "hnJLF8uhDvDoFK4ajuvwrg==",

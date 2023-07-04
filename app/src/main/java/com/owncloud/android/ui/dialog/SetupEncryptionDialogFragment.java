@@ -410,8 +410,6 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
 
                 String publicKeyString;
 
-                Context context = getContext();
-
                 if (context == null) {
                     keyResult = KEY_FAILED;
                     return "";

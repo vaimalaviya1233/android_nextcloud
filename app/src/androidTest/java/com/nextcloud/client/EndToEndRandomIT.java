@@ -30,6 +30,7 @@ import com.owncloud.android.AbstractOnServerIT;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.datamodel.OCFile;
+import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.db.OCUpload;
 import com.owncloud.android.files.services.FileUploader;
 import com.owncloud.android.lib.common.accounts.AccountUtils;
@@ -38,6 +39,8 @@ import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.ocs.responses.PrivateKey;
 import com.owncloud.android.lib.resources.e2ee.ToggleEncryptionRemoteOperation;
 import com.owncloud.android.lib.resources.files.ReadFileRemoteOperation;
+import com.owncloud.android.lib.resources.shares.OCShare;
+import com.owncloud.android.lib.resources.shares.ShareType;
 import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.lib.resources.status.OwnCloudVersion;
 import com.owncloud.android.lib.resources.users.DeletePrivateKeyRemoteOperation;
@@ -46,6 +49,7 @@ import com.owncloud.android.lib.resources.users.GetPrivateKeyRemoteOperation;
 import com.owncloud.android.lib.resources.users.GetPublicKeyRemoteOperation;
 import com.owncloud.android.lib.resources.users.SendCSRRemoteOperation;
 import com.owncloud.android.lib.resources.users.StorePrivateKeyRemoteOperation;
+import com.owncloud.android.operations.CreateShareWithShareeOperation;
 import com.owncloud.android.operations.DownloadFileOperation;
 import com.owncloud.android.operations.GetCapabilitiesOperation;
 import com.owncloud.android.operations.RemoveFileOperation;
@@ -75,6 +79,7 @@ import static com.owncloud.android.lib.resources.status.OwnCloudVersion.nextclou
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.assertNotNull;
+import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -551,6 +556,54 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
         useExistingKeys();
     }
 
+    @Test
+    public void shareFolder() throws Exception {
+        init();
+
+        DecryptedFolderMetadataFile metadata = EncryptionUtils.downloadFolderMetadata(currentFolder,
+                                                                                      client,
+                                                                                      targetContext,
+                                                                                      user,
+                                                                                      "");
+
+        // metadata does not yet exist
+        assertNull(metadata);
+
+        assertTrue(new CreateShareWithShareeOperation(
+            currentFolder.getRemotePath(),
+            "e2e",
+            ShareType.USER,
+            OCShare.SHARE_PERMISSION_FLAG,
+            "",
+            "",
+            -1,
+            false,
+            fileDataStorageManager,
+            targetContext,
+            user)
+                       .execute(client)
+                       .isSuccess());
+
+        // verify
+        metadata = EncryptionUtils.downloadFolderMetadata(currentFolder,
+                                                          client,
+                                                          targetContext,
+                                                          user,
+                                                          "");
+
+        assertEquals(2, metadata.getUsers().size());
+    }
+
+    @Test
+    private void testRemoveFiles() throws Exception {
+        init();
+        createFolder();
+        goIntoFolder(1);
+
+        OCFile root = fileDataStorageManager.getFileByDecryptedRemotePath("/");
+        removeFolder(root);
+    }
+
     private void useExistingKeys() throws Exception {
         // download them from server
         GetPublicKeyRemoteOperation publicKeyOperation = new GetPublicKeyRemoteOperation();
@@ -691,11 +744,11 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
                 // remove folder
                 Log_OC.d(this, "Remove folder: " + child.getDecryptedRemotePath());
                 if (!folder.isEncrypted() && child.isEncrypted()) {
-                    assertTrue(new ToggleEncryptionRemoteOperation(child.getLocalId(),
-                                                                   child.getRemotePath(),
-                                                                   false)
-                                   .execute(client)
-                                   .isSuccess());
+                    RemoteOperationResult result = new ToggleEncryptionRemoteOperation(child.getLocalId(),
+                                                                                       child.getRemotePath(),
+                                                                                       false)
+                        .execute(client);
+                    assertTrue(result.getLogMessage(), result.isSuccess());
 
                     OCFile f = getStorageManager().getFileByEncryptedRemotePath(child.getRemotePath());
                     f.setEncrypted(false);

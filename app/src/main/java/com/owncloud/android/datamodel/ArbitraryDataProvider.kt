@@ -30,6 +30,7 @@ interface ArbitraryDataProvider {
     fun storeOrUpdateKeyValue(accountName: String, key: String, newValue: Long)
     fun storeOrUpdateKeyValue(accountName: String, key: String, newValue: Boolean)
     fun storeOrUpdateKeyValue(accountName: String, key: String, newValue: String)
+    fun storeOrUpdateKeyValue(user: User, key: String, newValue: String)
 
     fun getLongValue(accountName: String, key: String): Long
     fun getLongValue(user: User, key: String): Long
@@ -43,5 +44,6 @@ interface ArbitraryDataProvider {
         const val DIRECT_EDITING = "DIRECT_EDITING"
         const val DIRECT_EDITING_ETAG = "DIRECT_EDITING_ETAG"
         const val PREDEFINED_STATUS = "PREDEFINED_STATUS"
+        const val PUBLIC_KEY = "PUBLIC_KEY_"
     }
 }

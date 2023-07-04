@@ -1180,7 +1180,8 @@ public final class EncryptionUtils {
             // store metadata
             uploadMetadataOperationResult = new StoreMetadataRemoteOperation(
                 parentFile.getLocalId(),
-                serializedFolderMetadata)
+                serializedFolderMetadata,
+                token)
                 .execute(client);
         }
 
@@ -1333,5 +1334,20 @@ public final class EncryptionUtils {
             sbKey.append(String.format("%02X ", b));
         }
         return sbKey.toString();
+    }
+
+    public static void savePublicKey(User currentUser,
+                                     String key,
+                                     String user,
+                                     ArbitraryDataProvider arbitraryDataProvider) {
+        arbitraryDataProvider.storeOrUpdateKeyValue(currentUser,
+                                                    ArbitraryDataProvider.PUBLIC_KEY + user,
+                                                    key);
+    }
+
+    public static String getPublicKey(User currentUser,
+                                      String user,
+                                      ArbitraryDataProvider arbitraryDataProvider) {
+        return arbitraryDataProvider.getValue(currentUser, ArbitraryDataProvider.PUBLIC_KEY + user);
     }
 }

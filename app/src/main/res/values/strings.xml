@@ -1114,4 +1114,6 @@
     <string name="sub_folder_rule_year">Year</string>
     <string name="sub_folder_rule_month">Year/Month</string>
     <string name="sub_folder_rule_day">Year/Month/Day</string>
+    <string name="secure_sharing_failed">Secure sharing failed</string>
+    <string name="secure_share_not_set_up">Secure sharing is not set up for this user</string>
 </resources>

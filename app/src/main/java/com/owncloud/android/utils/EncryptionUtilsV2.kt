@@ -73,7 +73,7 @@ class EncryptionUtilsV2 {
     fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: String): EncryptedMetadata {
         val json = EncryptionUtils.serializeJSON(metadata)
         val gzip = gZipCompress(json)
-        
+
         return EncryptionUtils.encryptStringSymmetric(
             gzip,
             metadataKey.toByteArray(),
@@ -482,7 +482,10 @@ class EncryptionUtilsV2 {
                 // decrypt metadata
                 val decryptedV1 = EncryptionUtils.decryptFolderMetaData(
                     v1,
-                    privateKey, arbitraryDataProvider, user, folder.localId
+                    privateKey,
+                    arbitraryDataProvider,
+                    user,
+                    folder.localId
                 )
                 val publicKey: String = arbitraryDataProvider.getValue(
                     user.accountName,
@@ -658,7 +661,8 @@ class EncryptionUtilsV2 {
             // store metadata
             StoreMetadataRemoteOperation(
                 parentFile.localId,
-                serializedFolderMetadata
+                serializedFolderMetadata,
+                token
             )
                 .execute(client)
         }
@@ -669,11 +673,20 @@ class EncryptionUtilsV2 {
 
     @Throws(IllegalStateException::class)
     @VisibleForTesting
-    fun verifyMetadata(metadata: DecryptedFolderMetadataFile): Boolean {
+    fun verifyMetadata(
+        metadata: DecryptedFolderMetadataFile,
+        oldCounter: Int,
+        ans: String // base 64 encoded BER
+    ): Boolean {
         // check counter
-        // metadata.metadata.counter
+        if (metadata.metadata.counter <= oldCounter) {
+            throw java.lang.IllegalStateException("Counter is too old")
+        }
 
         // check signature
+        val json = EncryptionUtils.serializeJSON(metadata)
+        val certs = metadata.users.map { EncryptionUtils.convertCertFromString(it.certificate) }
+        verifySignedMessage(ans, json, certs)
 
         // check hash of keys
         val hashedMetadataKey = hashMetadataKey(metadata.metadata.metadataKey)
