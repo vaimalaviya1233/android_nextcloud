@@ -100,13 +100,18 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
         boolean encryptedAncestor = FileStorageUtils.checkEncryptionStatus(parent, getStorageManager());
 
         if (encryptedAncestor) {
-            return encryptedCreate(parent, client);
+            getStorageManager().getCapability(user).getEndToEndEncryption()
+            if (v1) {
+                return encryptedCreateV1(parent, client);
+            } else {
+                return encryptedCreateV2(parent, client);
+            }
         } else {
             return normalCreate(client);
         }
     }
 
-    private RemoteOperationResult encryptedCreate(OCFile parent, OwnCloudClient client) {
+    private RemoteOperationResult encryptedCreateV1(OCFile parent, OwnCloudClient client) {
         ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProviderImpl(context);
 
         String token = null;
@@ -226,6 +231,10 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                 }
             }
         }
+    }
+
+    private RemoteOperationResult encryptedCreateV2() {
+
     }
 
     private boolean isFileExisting(DecryptedFolderMetadataFile metadata, String filename) {
