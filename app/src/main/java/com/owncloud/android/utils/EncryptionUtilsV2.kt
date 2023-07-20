@@ -43,8 +43,8 @@ import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedUser
 import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.accounts.AccountUtils
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation
-import com.owncloud.android.lib.resources.e2ee.StoreMetadataRemoteOperation
-import com.owncloud.android.lib.resources.e2ee.UpdateMetadataRemoteOperation
+import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation
+import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation
 import com.owncloud.android.operations.UploadException
 import org.apache.commons.httpclient.HttpStatus
 import org.bouncycastle.asn1.ASN1Sequence
@@ -649,17 +649,19 @@ class EncryptionUtilsV2 {
             privateKey
         )
         val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata)
+        val signature = ""
         val uploadMetadataOperationResult = if (metadataExists) {
             // update metadata
-            UpdateMetadataRemoteOperation(
+            UpdateMetadataV2RemoteOperation(
                 parentFile.localId,
                 serializedFolderMetadata,
-                token
+                token,
+                signature
             )
                 .execute(client)
         } else {
             // store metadata
-            StoreMetadataRemoteOperation(
+            StoreMetadataV2RemoteOperation(
                 parentFile.localId,
                 serializedFolderMetadata,
                 token
