@@ -389,7 +389,7 @@ public final class EncryptionUtils {
      * @return decrypted v2 metadata or null
      */
     public static @Nullable
-    com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile
+    Object
     downloadFolderMetadata(OCFile folder,
                            OwnCloudClient client,
                            Context context,
@@ -409,13 +409,38 @@ public final class EncryptionUtils {
         E2EVersion version = determinateVersion(serializedEncryptedMetadata);
 
         EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
-        //String publicKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PUBLIC_KEY);
 
-        return encryptionUtilsV2.parseAnyMetadata(serializedEncryptedMetadata,
-                                                  user,
-                                                  client,
-                                                  context,
-                                                  folder);
+        switch (version) {
+            case UNKNOWN:
+                Log_OC.e(TAG, "Unknown e2e state");
+                return null;
+
+            case V1_0, V1_1, V1_2:
+                ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProviderImpl(context);
+                String privateKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PRIVATE_KEY);
+                EncryptedFolderMetadataFileV1 encryptedFolderMetadata = EncryptionUtils.deserializeJSON(
+                    serializedEncryptedMetadata, new TypeToken<>() {
+                    });
+
+                try {
+                    return decryptFolderMetaData(encryptedFolderMetadata,
+                                                 privateKey,
+                                                 arbitraryDataProvider,
+                                                 user,
+                                                 folder.getLocalId());
+                } catch (Exception e) {
+                    Log_OC.e(TAG, "Could not decrypt metadata for " + folder.getDecryptedFileName(), e);
+                    return null;
+                }
+
+            case V2_0:
+                return encryptionUtilsV2.parseAnyMetadata(serializedEncryptedMetadata,
+                                                          user,
+                                                          client,
+                                                          context,
+                                                          folder);
+        }
+        return null;
     }
 
     public static E2EVersion determinateVersion(String metadata) {

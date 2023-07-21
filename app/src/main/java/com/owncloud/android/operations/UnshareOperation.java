@@ -26,6 +26,7 @@ import android.content.Context;
 import com.nextcloud.client.account.User;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
@@ -87,15 +88,21 @@ public class UnshareOperation extends SyncOperation {
                 }
 
                 // download metadata
-                DecryptedFolderMetadataFile metadata = EncryptionUtils.downloadFolderMetadata(file,
-                                                                                              client,
-                                                                                              context,
-                                                                                              user,
-                                                                                              token);
+                Object object = EncryptionUtils.downloadFolderMetadata(file,
+                                                                       client,
+                                                                       context,
+                                                                       user,
+                                                                       token);
 
-                if (metadata == null) {
+                if (object == null) {
                     return new RemoteOperationResult(new RuntimeException("No metadata!"));
                 }
+
+                if (object instanceof DecryptedFolderMetadataFileV1) {
+                    throw new RuntimeException("Trying to unshare on e2e v1!");
+                }
+
+                DecryptedFolderMetadataFile metadata = (DecryptedFolderMetadataFile) object;
 
                 // remove sharee from metadata
                 EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();

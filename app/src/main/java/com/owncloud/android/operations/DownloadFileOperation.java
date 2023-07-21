@@ -28,6 +28,7 @@ import android.webkit.MimeTypeMap;
 import com.nextcloud.client.account.User;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.OwnCloudClient;
@@ -200,24 +201,50 @@ public class DownloadFileOperation extends RemoteOperation {
 
                 OCFile parent = fileDataStorageManager.getFileByPath(file.getParentRemotePath());
 
-                DecryptedFolderMetadataFile metadata = EncryptionUtils.downloadFolderMetadata(parent,
-                                                                                              client,
-                                                                                              context,
-                                                                                              user,
-                                                                                              null);
+                Object object = EncryptionUtils.downloadFolderMetadata(parent,
+                                                                       client,
+                                                                       context,
+                                                                       user,
+                                                                       null);
 
-                if (metadata == null) {
-                    return new RemoteOperationResult(RemoteOperationResult.ResultCode.METADATA_NOT_FOUND);
-                }
-                DecryptedFile decryptedFile = metadata.getMetadata().getFiles().get(file.getEncryptedFileName());
-
-                if (decryptedFile == null) {
+                if (object == null) {
                     return new RemoteOperationResult(RemoteOperationResult.ResultCode.METADATA_NOT_FOUND);
                 }
 
-                byte[] key = decodeStringToBase64Bytes(decryptedFile.getKey());
-                byte[] iv = decodeStringToBase64Bytes(decryptedFile.getNonce());
-                byte[] authenticationTag = decodeStringToBase64Bytes(decryptedFile.getAuthenticationTag());
+                String keyString;
+                String nonceString;
+                String authenticationTagString;
+                if (object instanceof DecryptedFolderMetadataFile) {
+                    DecryptedFile decryptedFile = ((DecryptedFolderMetadataFile) object)
+                        .getMetadata()
+                        .getFiles()
+                        .get(file.getEncryptedFileName());
+
+                    if (decryptedFile == null) {
+                        return new RemoteOperationResult(RemoteOperationResult.ResultCode.METADATA_NOT_FOUND);
+                    }
+
+                    keyString = decryptedFile.getKey();
+                    nonceString = decryptedFile.getNonce();
+                    authenticationTagString = decryptedFile.getAuthenticationTag();
+                } else {
+                    com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile decryptedFile =
+                        ((DecryptedFolderMetadataFileV1) object)
+                            .getFiles()
+                            .get(file.getEncryptedFileName());
+
+                    if (decryptedFile == null) {
+                        return new RemoteOperationResult(RemoteOperationResult.ResultCode.METADATA_NOT_FOUND);
+                    }
+
+                    keyString = decryptedFile.getEncrypted().getKey();
+                    nonceString = decryptedFile.getInitializationVector();
+                    authenticationTagString = decryptedFile.getAuthenticationTag();
+                }
+
+                byte[] key = decodeStringToBase64Bytes(keyString);
+                byte[] iv = decodeStringToBase64Bytes(nonceString);
+                byte[] authenticationTag = decodeStringToBase64Bytes(authenticationTagString);
 
                 try {
                     byte[] decryptedBytes = EncryptionUtils.decryptFile(tmpFile, key, iv, authenticationTag);

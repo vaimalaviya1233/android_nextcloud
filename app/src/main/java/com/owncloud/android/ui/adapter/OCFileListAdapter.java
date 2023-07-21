@@ -56,6 +56,7 @@ import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.SyncedFolderProvider;
 import com.owncloud.android.datamodel.ThumbnailsCacheManager;
 import com.owncloud.android.datamodel.VirtualFolderType;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.db.ProviderMeta;
 import com.owncloud.android.lib.common.OwnCloudClientFactory;
@@ -802,19 +803,29 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
                 OCFile parentFolder = mStorageManager.getFileById(ocFile.getParentId());
                 if (parentFolder != null && (ocFile.isEncrypted() || parentFolder.isEncrypted())) {
-                    DecryptedFolderMetadataFile metadata = RefreshFolderOperation.getDecryptedFolderMetadata(
+                    Object object = RefreshFolderOperation.getDecryptedFolderMetadata(
                         true,
                         parentFolder,
                         OwnCloudClientFactory.createOwnCloudClient(user.toPlatformAccount(), activity),
                         user,
                         activity);
 
-                    if (metadata == null) {
+                    if (object == null) {
                         throw new IllegalStateException("metadata is null!");
                     }
 
-                    // update ocFile
-                    RefreshFolderOperation.updateFileNameForEncryptedFile(mStorageManager, metadata, ocFile);
+                    if (object instanceof DecryptedFolderMetadataFileV1) {
+                        // update ocFile
+                        RefreshFolderOperation.updateFileNameForEncryptedFileV1(mStorageManager,
+                                                                                (DecryptedFolderMetadataFileV1) object,
+                                                                                ocFile);
+                    } else {
+                        // update ocFile
+                        RefreshFolderOperation.updateFileNameForEncryptedFile(mStorageManager,
+                                                                              (DecryptedFolderMetadataFile) object,
+                                                                              ocFile);
+                    }
+
                     ocFile = mStorageManager.saveFileWithParent(ocFile, activity);
                 }
 

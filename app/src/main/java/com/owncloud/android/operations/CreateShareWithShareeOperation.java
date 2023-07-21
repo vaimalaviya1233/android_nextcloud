@@ -30,6 +30,7 @@ import com.nextcloud.client.account.User;
 import com.owncloud.android.R;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedUser;
 import com.owncloud.android.lib.common.OwnCloudClient;
@@ -158,11 +159,17 @@ public class CreateShareWithShareeOperation extends SyncOperation {
 
         // E2E: update metadata
         if (isEncrypted) {
-            DecryptedFolderMetadataFile metadata = EncryptionUtils.downloadFolderMetadata(folder,
-                                                                                          client,
-                                                                                          context,
-                                                                                          user,
-                                                                                          token);
+            Object object = EncryptionUtils.downloadFolderMetadata(folder,
+                                                                   client,
+                                                                   context,
+                                                                   user,
+                                                                   token);
+
+            if (object instanceof DecryptedFolderMetadataFileV1) {
+                throw new RuntimeException("Trying to share on e2e v1!");
+            }
+
+            DecryptedFolderMetadataFile metadata = (DecryptedFolderMetadataFile) object;
 
             boolean metadataExists;
             if (metadata == null) {

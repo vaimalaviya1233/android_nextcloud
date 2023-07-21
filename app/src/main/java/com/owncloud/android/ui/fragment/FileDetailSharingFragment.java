@@ -196,8 +196,7 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
     @Override
     public void onStart() {
         super.onStart();
-        // TODO check if E2E to figure out if this should be done. Use different lifecycle hooks if it makes more sense.
-        searchConfig.setSearchOnlyUsers(true);
+        searchConfig.setSearchOnlyUsers(file.isEncrypted());
     }
 
     @Override
