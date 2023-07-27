@@ -1849,12 +1849,13 @@ public class OCFileListFragment extends ExtendedListFragment implements
 
     protected void setTitle(final String title) {
         getActivity().runOnUiThread(() -> {
-            if (getActivity() != null) {
-                final ActionBar actionBar = ((FileDisplayActivity) getActivity()).getSupportActionBar();
+            if (getActivity() instanceof FileDisplayActivity fileDisplayActivity) {
+                final ActionBar actionBar = fileDisplayActivity.getSupportActionBar();
                 final Context context = getContext();
 
                 if (actionBar != null && context != null) {
                     viewThemeUtils.files.themeActionBar(context, actionBar, title, true);
+                    fileDisplayActivity.showSearchView();
                 }
             }
         });
