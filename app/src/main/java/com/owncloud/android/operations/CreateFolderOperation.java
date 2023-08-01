@@ -178,7 +178,9 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                                                serializedFolderMetadata,
                                                token,
                                                client,
-                                               metadataExists);
+                                               metadataExists,
+                                               E2EVersion.V1_2,
+                                               "");
 
                 // unlock folder
                 if (token != null) {

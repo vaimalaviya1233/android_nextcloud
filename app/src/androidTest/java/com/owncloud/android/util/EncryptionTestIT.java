@@ -59,6 +59,7 @@ import java.security.SecureRandom;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -717,6 +718,21 @@ public class EncryptionTestIT extends AbstractIT {
 
         assertTrue(jsonWithKeys.contains("metadataKeys"));
         assertFalse(jsonWithoutKeys.contains("metadataKeys"));
+    }
+    
+    @Test
+    public void testEqualsSign() {
+        assertEquals("\"===\"", serializeJSON("==="));
+    }
+    
+    @Test
+    public void testBase64() {
+        Base64.Encoder encoder = Base64.getEncoder();
+        String originalString = "randomstring123";
+        String encodedString = encoder.encodeToString(originalString.getBytes());
+
+        String compare = new String(Base64.getDecoder().decode(encodedString));
+        assertEquals(originalString, compare);
     }
 
     @Test

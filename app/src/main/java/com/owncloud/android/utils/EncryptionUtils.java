@@ -43,6 +43,7 @@ import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFile;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedUser;
 import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedMetadata;
 import com.owncloud.android.lib.common.OwnCloudClient;
@@ -51,8 +52,10 @@ import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.LockFileRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UnlockFileRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.lib.resources.status.NextcloudVersion;
 import com.owncloud.android.operations.UploadException;
@@ -157,9 +160,16 @@ public final class EncryptionUtils {
 
     public static String serializeJSON(Object data, boolean excludeTransient) {
         if (excludeTransient) {
-            return new Gson().toJson(data);
+            return new GsonBuilder()
+                .disableHtmlEscaping()
+                .create()
+                .toJson(data);
         } else {
-            return new GsonBuilder().excludeFieldsWithModifiers(0).create().toJson(data);
+            return new GsonBuilder()
+                .disableHtmlEscaping()
+                .excludeFieldsWithModifiers(0)
+                .create()
+                .toJson(data);
         }
     }
 
@@ -467,7 +477,7 @@ public final class EncryptionUtils {
                 new TypeToken<>() {
                 });
 
-            if (v2.getVersion() == 2) {
+            if (v2.getVersion().equals("2.0")) {
                 return E2EVersion.V2_0;
             }
         }
@@ -1028,6 +1038,13 @@ public final class EncryptionUtils {
         return "-----BEGIN PRIVATE KEY-----\n" + privateKeyString.replaceAll("(.{65})", "$1\n")
             + "\n-----END PRIVATE KEY-----";
     }
+    
+    public static PrivateKey PEMtoPrivateKey(String pem) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        byte[] privateKeyBytes = EncryptionUtils.decodeStringToBase64Bytes(pem);
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory kf = KeyFactory.getInstance(EncryptionUtils.RSA);
+        return kf.generatePrivate(keySpec);
+    }
 
     /*
     Helper
@@ -1264,10 +1281,11 @@ public final class EncryptionUtils {
             metadata = new DecryptedFolderMetadataFile(new com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedMetadata(),
                                                        new ArrayList<>(),
                                                        new HashMap<>(),
-                                                       2);
+                                                       E2EVersion.V2_0.getValue());
+            metadata.getUsers().add(new DecryptedUser(client.getUserId(), publicKey));
             String metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey());
-            String encryptedMetadataKey = EncryptionUtils.encryptStringAsymmetric(metadataKey, publicKey);
-            metadata.getMetadata().setMetadataKey(encryptedMetadataKey);
+            // String encryptedMetadataKey = EncryptionUtils.encryptStringAsymmetric(metadataKey, publicKey);
+            metadata.getMetadata().setMetadataKey(metadataKey);
 
             return new Pair<>(Boolean.FALSE, metadata);
         } else {
@@ -1280,22 +1298,43 @@ public final class EncryptionUtils {
                                       String serializedFolderMetadata,
                                       String token,
                                       OwnCloudClient client,
-                                      boolean metadataExists) throws UploadException {
+                                      boolean metadataExists,
+                                      E2EVersion version,
+                                      String signature) throws UploadException {
         RemoteOperationResult<String> uploadMetadataOperationResult;
         if (metadataExists) {
             // update metadata
-            uploadMetadataOperationResult = new UpdateMetadataRemoteOperation(
-                parentFile.getLocalId(),
-                serializedFolderMetadata,
-                token)
-                .execute(client);
+            if (version == E2EVersion.V2_0) {
+                uploadMetadataOperationResult = new UpdateMetadataV2RemoteOperation(
+                    parentFile.getLocalId(),
+                    serializedFolderMetadata,
+                    token, 
+                    signature)
+                    .execute(client);
+            } else {
+                uploadMetadataOperationResult = new UpdateMetadataRemoteOperation(
+                    parentFile.getLocalId(),
+                    serializedFolderMetadata,
+                    token)
+                    .execute(client);
+            }
         } else {
             // store metadata
-            uploadMetadataOperationResult = new StoreMetadataRemoteOperation(
-                parentFile.getLocalId(),
-                serializedFolderMetadata
-            )
-                .execute(client);
+            if (version == E2EVersion.V2_0) {
+                uploadMetadataOperationResult = new StoreMetadataV2RemoteOperation(
+                    parentFile.getLocalId(),
+                    serializedFolderMetadata,
+                    token,
+                    signature
+                )
+                    .execute(client);
+            } else {
+                uploadMetadataOperationResult = new StoreMetadataRemoteOperation(
+                    parentFile.getLocalId(),
+                    serializedFolderMetadata
+                )
+                    .execute(client);
+            }
         }
 
         if (!uploadMetadataOperationResult.isSuccess()) {

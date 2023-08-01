@@ -30,7 +30,7 @@ import com.owncloud.android.AbstractOnServerIT;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.datamodel.OCFile;
-import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
+import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.db.OCUpload;
 import com.owncloud.android.files.services.FileUploader;
 import com.owncloud.android.lib.common.accounts.AccountUtils;
@@ -560,14 +560,14 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
     public void shareFolder() throws Exception {
         init();
 
-        DecryptedFolderMetadataFile metadata = EncryptionUtils.downloadFolderMetadata(currentFolder,
+        Object object = EncryptionUtils.downloadFolderMetadata(currentFolder,
                                                                                       client,
                                                                                       targetContext,
                                                                                       user,
                                                                                       "");
 
         // metadata does not yet exist
-        assertNull(metadata);
+        assertNull(object);
 
         assertTrue(new CreateShareWithShareeOperation(
             currentFolder.getRemotePath(),
@@ -585,13 +585,15 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
                        .isSuccess());
 
         // verify
-        metadata = EncryptionUtils.downloadFolderMetadata(currentFolder,
+        Object newObject = EncryptionUtils.downloadFolderMetadata(currentFolder,
                                                           client,
                                                           targetContext,
                                                           user,
                                                           "");
 
-        assertEquals(2, metadata.getUsers().size());
+        assertTrue(newObject instanceof EncryptedFolderMetadataFile);
+        
+        assertEquals(2, ((EncryptedFolderMetadataFile) newObject).getUsers().size());
     }
 
     @Test

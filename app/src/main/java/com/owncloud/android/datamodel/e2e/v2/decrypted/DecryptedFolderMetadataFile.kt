@@ -27,6 +27,7 @@ package com.owncloud.android.datamodel.e2e.v2.decrypted
 data class DecryptedFolderMetadataFile(
     val metadata: DecryptedMetadata,
     var users: MutableList<DecryptedUser> = mutableListOf(),
-    val filedrop: Map<String, DecryptedFile> = HashMap(),
-    val version: Int = 2
+    @Transient
+    val filedrop: MutableMap<String, DecryptedFile> = HashMap(),
+    val version: String = "2.0"
 )

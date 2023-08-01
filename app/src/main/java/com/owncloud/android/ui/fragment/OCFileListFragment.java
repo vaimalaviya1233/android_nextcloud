@@ -75,7 +75,6 @@ import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.SyncedFolderProvider;
 import com.owncloud.android.datamodel.VirtualFolderType;
-import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.Creator;
@@ -86,6 +85,7 @@ import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.ToggleEncryptionRemoteOperation;
 import com.owncloud.android.lib.resources.files.SearchRemoteOperation;
 import com.owncloud.android.lib.resources.files.ToggleFavoriteRemoteOperation;
+import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.ui.activity.FileActivity;
 import com.owncloud.android.ui.activity.FileDisplayActivity;
@@ -128,6 +128,8 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -1719,6 +1721,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
             dialog.setTargetFragment(this, SETUP_ENCRYPTION_REQUEST_CODE);
             dialog.show(getParentFragmentManager(), SETUP_ENCRYPTION_DIALOG_TAG);
         } else {
+            // TODO if encryption fails, to not set it as encrypted!
             encryptFolder(file,
                           event.localId,
                           event.remoteId,
@@ -1735,10 +1738,11 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                String remoteId,
                                String remotePath,
                                boolean shouldBeEncrypted,
-                               String publicKey,
-                               String privateKey,
+                               String publicKeyString,
+                               String privateKeyString,
                                FileDataStorageManager storageManager) {
         try {
+            Log_OC.d(TAG, "encrypt folder " + folder.getRemoteId());
             User user = accountManager.getUser();
             OwnCloudClient client = clientFactory.create(user);
             RemoteOperationResult remoteOperationResult = new ToggleEncryptionRemoteOperation(localId,
@@ -1753,8 +1757,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 // Update metadata
                 Pair<Boolean, DecryptedFolderMetadataFile> metadataPair = EncryptionUtils.retrieveMetadata(folder,
                                                                                                            client,
-                                                                                                           privateKey,
-                                                                                                           publicKey,
+                                                                                                           privateKeyString,
+                                                                                                           publicKeyString,
                                                                                                            storageManager);
 
                 boolean metadataExists = metadataPair.first;
@@ -1766,7 +1770,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                                mContainerActivity.getStorageManager(),
                                                client,
                                                client.getUserId(),
-                                               privateKey);
+                                               privateKeyString,
+                                               publicKeyString);
 
                 String serializedFolderMetadata;
 
@@ -1778,11 +1783,19 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 }
 
                 // upload metadata
+                X509Certificate certificate = EncryptionUtils.convertCertFromString(publicKeyString);
+                PrivateKey privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString);
+                String signature = new EncryptionUtilsV2().getMessageSignature(certificate, 
+                                                                               privateKey,
+                                                                               metadata);
+                
                 EncryptionUtils.uploadMetadata(folder,
                                                serializedFolderMetadata,
                                                token,
                                                client,
-                                               metadataExists);
+                                               metadataExists,
+                                               E2EVersion.V2_0,
+                                               signature);
 
                 // unlock folder
                 EncryptionUtils.unlockFolder(folder, client, token);

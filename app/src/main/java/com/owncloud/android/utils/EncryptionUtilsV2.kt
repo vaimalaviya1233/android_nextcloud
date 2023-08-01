@@ -42,6 +42,7 @@ import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedMetadata
 import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedUser
 import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.accounts.AccountUtils
+import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation
@@ -103,25 +104,33 @@ class EncryptionUtilsV2 {
         storageManager: FileDataStorageManager,
         client: OwnCloudClient,
         userId: String,
-        privateKey: String
+        privateKey: String,
+        certificate: String
     ): EncryptedFolderMetadataFile {
         val encryptedUsers: List<EncryptedUser>
         val encryptedMetadata: EncryptedMetadata
         if (metadataFile.users.isEmpty()) {
-            // we are in a subfolder, re-use users array
-            val key = retrieveTopMostMetadataKey(
-                ocFile,
-                storageManager,
-                client,
-                userId,
-                privateKey
+            encryptedUsers = arrayListOf(
+                encryptUser(
+                    DecryptedUser(userId, certificate),
+                    metadataFile.metadata.metadataKey
+                )
             )
-
-            // do not store metadata key
-            metadataFile.metadata.metadataKey = ""
-
-            encryptedUsers = emptyList()
-            encryptedMetadata = encryptMetadata(metadataFile.metadata, key)
+            // TODO later add subfolder
+            // we are in a subfolder, re-use users array
+            // val key = retrieveTopMostMetadataKey(
+            //     ocFile,
+            //     storageManager,
+            //     client,
+            //     userId,
+            //     privateKey
+            // )
+            //
+            // // do not store metadata key
+            // metadataFile.metadata.metadataKey = ""
+            //
+            // encryptedUsers = emptyList()
+            encryptedMetadata = encryptMetadata(metadataFile.metadata, metadataFile.metadata.metadataKey)
         } else {
             encryptedUsers = metadataFile.users.map {
                 encryptUser(it, metadataFile.metadata.metadataKey)
@@ -131,8 +140,7 @@ class EncryptionUtilsV2 {
 
         return EncryptedFolderMetadataFile(
             encryptedMetadata,
-            encryptedUsers,
-            emptyMap()
+            encryptedUsers
         )
 
         // if (metadataFile.users.isEmpty()) {
@@ -182,7 +190,7 @@ class EncryptionUtilsV2 {
             return DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 mutableListOf(),
-                emptyMap() // TODO
+                mutableMapOf() // TODO
             )
         } else {
             val decryptedMetadataKey = decryptMetadataKey(encryptedUser, privateKey)
@@ -194,7 +202,7 @@ class EncryptionUtilsV2 {
             return DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 users,
-                emptyMap() // TODO
+                mutableMapOf() // TODO
             )
         }
     }
@@ -457,7 +465,7 @@ class EncryptionUtilsV2 {
             object : TypeToken<EncryptedFolderMetadataFile>() {}
         )
 
-        val decryptedFolderMetadata = if (v2.version == 2) {
+        val decryptedFolderMetadata = if (v2.version == "2.0") {
             val userId = AccountManager.get(context).getUserData(
                 user.toPlatformAccount(),
                 AccountUtils.Constants.KEY_USER_ID
@@ -610,7 +618,7 @@ class EncryptionUtilsV2 {
         val users = mutableListOf(DecryptedUser(userId, cert))
 
         // TODO
-        val filedrop = emptyMap<String, DecryptedFile>()
+        val filedrop = mutableMapOf<String, DecryptedFile>()
 
         return DecryptedFolderMetadataFile(metadataV2, users, filedrop)
     }
@@ -639,6 +647,7 @@ class EncryptionUtilsV2 {
     ) {
         val arbitraryDataProvider: ArbitraryDataProvider = ArbitraryDataProviderImpl(context)
         val privateKey: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PRIVATE_KEY)
+        val publicKey: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PUBLIC_KEY)
 
         val encryptedFolderMetadata = encryptFolderMetadataFile(
             metadata,
@@ -646,7 +655,8 @@ class EncryptionUtilsV2 {
             storageManager,
             client,
             client.userId,
-            privateKey
+            privateKey,
+            publicKey
         )
         val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata)
         val signature = ""
@@ -664,7 +674,8 @@ class EncryptionUtilsV2 {
             StoreMetadataV2RemoteOperation(
                 parentFile.localId,
                 serializedFolderMetadata,
-                token
+                token,
+                signature
             )
                 .execute(client)
         }
@@ -720,15 +731,11 @@ class EncryptionUtilsV2 {
         return BigInteger(1, bytes).toString(16).padStart(32, '0')
     }
 
-    /**
-     * Sign the data with key, embed the certificate associated within the CMSSignedData
-     * detached data not possible, as to restore asn.1
-     */
     fun signMessage(cert: X509Certificate, key: PrivateKey, data: ByteArray): CMSSignedData {
         val content = CMSProcessableByteArray(data)
         val certs = JcaCertStore(listOf(cert))
 
-        val sha1signer = JcaContentSignerBuilder("SHA1withRSA").setProvider("BC").build(key)
+        val sha1signer = JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(key)
         val signGen = CMSSignedDataGenerator().apply {
             addSignerInfoGenerator(
                 JcaSignerInfoGeneratorBuilder(JcaDigestCalculatorProviderBuilder().build()).build(
@@ -745,14 +752,45 @@ class EncryptionUtilsV2 {
     }
 
     /**
+     * Sign the data with key, embed the certificate associated within the CMSSignedData
+     * detached data not possible, as to restore asn.1
+     */
+    fun signMessage(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile): CMSSignedData {
+        val json = EncryptionUtils.serializeJSON(message, true)
+        val data = json.toByteArray() 
+        
+        return signMessage(cert, key, data)
+    }
+
+    fun signMessage(cert: X509Certificate, key: PrivateKey, string: String): CMSSignedData {
+        val data = string.toByteArray()
+
+        return signMessage(cert, key, data)
+    }
+
+    fun extractSignedString(signedData: CMSSignedData): String {
+        val ans = signedData.getEncoded("BER")
+        return EncryptionUtils.encodeBytesToBase64String(ans)
+    }
+    
+    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile) : String {
+        val signedMessage = signMessage(cert, key, message)
+        return extractSignedString(signedMessage)
+    }
+
+    /**
      * Verify the signature but does not use the certificate in the signed object
      */
     fun verifySignedMessage(data: CMSSignedData, certs: List<X509Certificate>): Boolean {
         val signer: SignerInformation = data.signerInfos.signers.iterator().next() as SignerInformation
 
         certs.forEach {
-            if (signer.verify(JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(it))) {
-                return true
+            try {
+                if (signer.verify(JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(it))) {
+                    return true
+                }
+            } catch (e: java.lang.Exception) {
+                Log_OC.e("Encryption", "error", e)
             }
         }
 

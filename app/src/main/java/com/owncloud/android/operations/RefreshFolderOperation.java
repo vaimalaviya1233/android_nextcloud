@@ -406,7 +406,8 @@ public class RefreshFolderOperation extends RemoteOperation {
     private RemoteOperationResult fetchAndSyncRemoteFolder(OwnCloudClient client) {
         String remotePath = mLocalFolder.getRemotePath();
         RemoteOperationResult result = new ReadFolderRemoteOperation(remotePath).execute(client);
-        Log_OC.d(TAG, "Synchronizing " + user.getAccountName() + remotePath);
+        Log_OC.d(TAG, "Refresh folder " + user.getAccountName() + remotePath);
+        Log_OC.d(TAG, "Refresh folder with remote id" + mLocalFolder.getRemoteId());
 
         if (result.isSuccess()) {
             synchronizeData(result.getData());
@@ -479,7 +480,7 @@ public class RefreshFolderOperation extends RemoteOperation {
                                                    user,
                                                    mContext);
 
-        if (object == null) {
+        if (encryptedAncestor && object == null) {
             throw new IllegalStateException("metadata is null!");
         }
 
