@@ -508,6 +508,14 @@ public final class EncryptionUtils {
         return Base64.encodeToString(bytes, Base64.NO_WRAP);
     }
 
+    public static String encodeStringToBase64String(String string) {
+        return Base64.encodeToString(string.getBytes(), Base64.NO_WRAP);
+    }
+
+    public static String decodeBase64StringToString(String string) {
+        return new String(Base64.decode(string, Base64.NO_WRAP));
+    }
+
     public static byte[] decodeStringToBase64Bytes(String string) {
         return Base64.decode(string, Base64.NO_WRAP);
     }
