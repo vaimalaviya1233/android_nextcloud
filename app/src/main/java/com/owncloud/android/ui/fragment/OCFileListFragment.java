@@ -1785,9 +1785,9 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 // upload metadata
                 X509Certificate certificate = EncryptionUtils.convertCertFromString(publicKeyString);
                 PrivateKey privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString);
-                String signature = new EncryptionUtilsV2().getMessageSignature(certificate, 
+                String signature = new EncryptionUtilsV2().getMessageSignature(certificate,
                                                                                privateKey,
-                                                                               metadata);
+                                                                               serializedFolderMetadata);
                 
                 EncryptionUtils.uploadMetadata(folder,
                                                serializedFolderMetadata,

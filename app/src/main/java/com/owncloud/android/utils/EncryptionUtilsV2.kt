@@ -774,9 +774,14 @@ class EncryptionUtilsV2 {
         val ans = signedData.getEncoded("BER")
         return EncryptionUtils.encodeBytesToBase64String(ans)
     }
-    
-    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile) : String {
+
+    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile): String {
         val signedMessage = signMessage(cert, key, message)
+        return extractSignedString(signedMessage)
+    }
+
+    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, string: String): String {
+        val signedMessage = signMessage(cert, key, string)
         return extractSignedString(signedMessage)
     }
 
