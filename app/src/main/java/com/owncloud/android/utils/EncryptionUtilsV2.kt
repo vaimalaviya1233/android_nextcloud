@@ -735,7 +735,7 @@ class EncryptionUtilsV2 {
         val content = CMSProcessableByteArray(data)
         val certs = JcaCertStore(listOf(cert))
 
-        val sha1signer = JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(key)
+        val sha1signer = JcaContentSignerBuilder("SHA256withRSA").build(key)
         val signGen = CMSSignedDataGenerator().apply {
             addSignerInfoGenerator(
                 JcaSignerInfoGeneratorBuilder(JcaDigestCalculatorProviderBuilder().build()).build(
@@ -757,13 +757,15 @@ class EncryptionUtilsV2 {
      */
     fun signMessage(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile): CMSSignedData {
         val json = EncryptionUtils.serializeJSON(message, true)
-        val data = json.toByteArray() 
-        
+        val base64 = EncryptionUtils.encodeStringToBase64String(json)
+        val data = base64.toByteArray()
+
         return signMessage(cert, key, data)
     }
 
     fun signMessage(cert: X509Certificate, key: PrivateKey, string: String): CMSSignedData {
-        val data = string.toByteArray()
+        val base64 = EncryptionUtils.encodeStringToBase64String(string)
+        val data = base64.toByteArray()
 
         return signMessage(cert, key, data)
     }
@@ -786,7 +788,7 @@ class EncryptionUtilsV2 {
 
         certs.forEach {
             try {
-                if (signer.verify(JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(it))) {
+                if (signer.verify(JcaSimpleSignerInfoVerifierBuilder().build(it))) {
                     return true
                 }
             } catch (e: java.lang.Exception) {
