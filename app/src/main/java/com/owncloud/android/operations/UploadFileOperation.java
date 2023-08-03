@@ -450,12 +450,14 @@ public class UploadFileOperation extends SyncOperation {
                 return result;
             }
             /***** E2E *****/
+            // whenever we change something, increase counter
+            long counter = parentFile.getE2eCounter() + 1;
 
             // we might have an old token from interrupted upload
             if (mFolderUnlockToken != null && !mFolderUnlockToken.isEmpty()) {
                 token = mFolderUnlockToken;
             } else {
-                token = EncryptionUtils.lockFolder(parentFile, client);
+                token = EncryptionUtils.lockFolder(parentFile, client, counter);
                 // immediately store it
                 mUpload.setFolderUnlockToken(token);
                 uploadsStorageManager.updateUpload(mUpload);
@@ -471,7 +473,7 @@ public class UploadFileOperation extends SyncOperation {
 
             metadataExists = metadataPair.getFirst();
             DecryptedFolderMetadataFile metadata = metadataPair.getSecond();
-
+            // TODO check counter: must be less than our counter, check rest: signature, etc
             /**** E2E *****/
 
             // check name collision

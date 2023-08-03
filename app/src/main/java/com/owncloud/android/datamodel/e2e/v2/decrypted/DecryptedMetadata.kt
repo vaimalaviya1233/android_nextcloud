@@ -30,5 +30,5 @@ data class DecryptedMetadata(
     var counter: Int = 0,
     val folders: MutableMap<String, String> = mutableMapOf(),
     val files: MutableMap<String, DecryptedFile> = mutableMapOf(),
-    var metadataKey: String = EncryptionUtils.generateKeyString()
+    var metadataKey: ByteArray = EncryptionUtils.generateKey()
 )

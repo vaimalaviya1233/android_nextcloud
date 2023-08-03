@@ -191,8 +191,8 @@ android {
         exclude '**/gen/**'
 
         reports {
-            xml.enabled = false
-            html.enabled = true
+            // xml.enabled = false
+            // html.enabled = true
             xml {
                 destination = file("$project.buildDir/reports/pmd/pmd.xml")
             }

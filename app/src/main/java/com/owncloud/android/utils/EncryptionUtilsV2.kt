@@ -71,22 +71,22 @@ import java.util.zip.GZIPOutputStream
 
 class EncryptionUtilsV2 {
     @VisibleForTesting
-    fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: String): EncryptedMetadata {
+    fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: ByteArray): EncryptedMetadata {
         val json = EncryptionUtils.serializeJSON(metadata)
         val gzip = gZipCompress(json)
 
         return EncryptionUtils.encryptStringSymmetric(
             gzip,
-            metadataKey.toByteArray(),
+            metadataKey,
             EncryptionUtils.ivDelimiter
         )
     }
 
     @VisibleForTesting
-    fun decryptMetadata(metadata: EncryptedMetadata, metadataKey: String): DecryptedMetadata {
+    fun decryptMetadata(metadata: EncryptedMetadata, metadataKey: ByteArray): DecryptedMetadata {
         val decrypted = EncryptionUtils.decryptStringSymmetric(
             metadata.ciphertext,
-            metadataKey.toByteArray(),
+            metadataKey,
             metadata.authenticationTag,
             metadata.nonce
         )
@@ -133,7 +133,10 @@ class EncryptionUtilsV2 {
             encryptedMetadata = encryptMetadata(metadataFile.metadata, metadataFile.metadata.metadataKey)
         } else {
             encryptedUsers = metadataFile.users.map {
-                encryptUser(it, metadataFile.metadata.metadataKey)
+                encryptUser(
+                    it,
+                    metadataFile.metadata.metadataKey
+                )
             }
             encryptedMetadata = encryptMetadata(metadataFile.metadata, metadataFile.metadata.metadataKey)
         }
@@ -197,7 +200,10 @@ class EncryptionUtilsV2 {
 
             val users = metadataFile.users.map { transformUser(it) }.toMutableList()
 
-            val decryptedMetadata = decryptMetadata(metadataFile.metadata, decryptedMetadataKey)
+            val decryptedMetadata = decryptMetadata(
+                metadataFile.metadata,
+                decryptedMetadataKey
+            )
 
             return DecryptedFolderMetadataFile(
                 decryptedMetadata,
@@ -214,7 +220,7 @@ class EncryptionUtilsV2 {
         client: OwnCloudClient,
         userId: String,
         privateKey: String
-    ): String {
+    ): ByteArray {
         var topMost = folder
         var parent =
             storageManager.getFileById(topMost.parentId) ?: throw IllegalStateException("Cannot retrieve metadata")
@@ -249,8 +255,8 @@ class EncryptionUtilsV2 {
     }
 
     @VisibleForTesting
-    fun encryptUser(user: DecryptedUser, metadataKey: String): EncryptedUser {
-        val encryptedKey = EncryptionUtils.encryptStringAsymmetric(
+    fun encryptUser(user: DecryptedUser, metadataKey: ByteArray): EncryptedUser {
+        val encryptedKey = EncryptionUtils.encryptStringAsymmetricV2(
             metadataKey,
             user.certificate
         )
@@ -271,8 +277,8 @@ class EncryptionUtilsV2 {
     }
 
     @VisibleForTesting
-    fun decryptMetadataKey(user: EncryptedUser, privateKey: String): String {
-        return EncryptionUtils.decryptStringAsymmetric(
+    fun decryptMetadataKey(user: EncryptedUser, privateKey: String): ByteArray {
+        return EncryptionUtils.decryptStringAsymmetricV2(
             user.encryptedMetadataKey,
             privateKey
         )
@@ -317,7 +323,7 @@ class EncryptionUtilsV2 {
         cert: String
     ): DecryptedFolderMetadataFile {
         metadataFile.users.add(DecryptedUser(userId, cert))
-        metadataFile.metadata.metadataKey = EncryptionUtils.generateKeyString()
+        metadataFile.metadata.metadataKey = EncryptionUtils.generateKey()
 
         return metadataFile
     }
@@ -333,7 +339,7 @@ class EncryptionUtilsV2 {
             throw java.lang.RuntimeException("Removal of user $userIdToRemove failed!")
         }
 
-        metadataFile.metadata.metadataKey = EncryptionUtils.generateKeyString()
+        metadataFile.metadata.metadataKey = EncryptionUtils.generateKey()
         // TODO add to keyChecksum array
 
         return metadataFile
@@ -611,7 +617,8 @@ class EncryptionUtilsV2 {
             0,
             mutableMapOf(),
             v1.files.mapValues { migrateDecryptedFileV1ToV2(it.value) }.toMutableMap(),
-            v1.metadata.metadataKeys[0] ?: throw IllegalStateException("Metadata key not found!")
+            EncryptionUtils.decodeStringToBase64Bytes(v1.metadata.metadataKeys[0])
+                ?: throw IllegalStateException("Metadata key not found!")
         )
 
         // upon migration there can only be one user, as there is no sharing yet in place
@@ -646,8 +653,8 @@ class EncryptionUtilsV2 {
         user: User
     ) {
         val arbitraryDataProvider: ArbitraryDataProvider = ArbitraryDataProviderImpl(context)
-        val privateKey: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PRIVATE_KEY)
-        val publicKey: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PUBLIC_KEY)
+        val privateKeyString: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PRIVATE_KEY)
+        val publicKeyString: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PUBLIC_KEY)
 
         val encryptedFolderMetadata = encryptFolderMetadataFile(
             metadata,
@@ -655,11 +662,14 @@ class EncryptionUtilsV2 {
             storageManager,
             client,
             client.userId,
-            privateKey,
-            publicKey
+            privateKeyString,
+            publicKeyString
         )
         val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata)
-        val signature = ""
+        val cert = EncryptionUtils.convertCertFromString(publicKeyString)
+        val privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString)
+
+        val signature = getMessageSignature(cert, privateKey, metadata)
         val uploadMetadataOperationResult = if (metadataExists) {
             // update metadata
             UpdateMetadataV2RemoteOperation(
@@ -723,10 +733,10 @@ class EncryptionUtilsV2 {
     /**
      * SHA-256 hash of metadata-key
      */
-    fun hashMetadataKey(metadataKey: String): String {
+    fun hashMetadataKey(metadataKey: ByteArray): String {
         val bytes = MessageDigest
             .getInstance("SHA-256")
-            .digest(metadataKey.toByteArray())
+            .digest(metadataKey)
 
         return BigInteger(1, bytes).toString(16).padStart(32, '0')
     }

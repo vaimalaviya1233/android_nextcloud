@@ -29,7 +29,7 @@ public class DecryptedMetadata {
     private Map<Integer, String> metadataKeys; // outdated with v1.1
     private String metadataKey;
     private String checksum;
-    private double version = 1.2;
+    private double version;
 
     @Override
     public String toString() {

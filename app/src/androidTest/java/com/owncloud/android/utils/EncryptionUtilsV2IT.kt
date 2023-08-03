@@ -251,15 +251,30 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
     @Test
     fun testEncryptDecryptUser() {
         val encryptionUtilsV2 = EncryptionUtilsV2()
-        val metadataKey = EncryptionUtils.generateKeyString() // base64
+        val metadataKeyBase64 = EncryptionUtils.generateKeyString()
+        val metadataKey = EncryptionUtils.decodeStringToBase64Bytes(metadataKeyBase64)
+
         val user = DecryptedUser("t1", t1PublicKey)
 
         val encryptedUser = encryptionUtilsV2.encryptUser(user, metadataKey)
-        assertNotEquals(encryptedUser.encryptedMetadataKey, metadataKey)
+        assertNotEquals(encryptedUser.encryptedMetadataKey, metadataKeyBase64)
 
         val decryptedMetadataKey = encryptionUtilsV2.decryptMetadataKey(encryptedUser, t1PrivateKey)
+        val decryptedMetadataKeyBase64 = EncryptionUtils.encodeBytesToBase64String(decryptedMetadataKey)
 
-        assertEquals(metadataKey, decryptedMetadataKey)
+        assertEquals(metadataKeyBase64, decryptedMetadataKeyBase64)
+    }
+
+    @Test
+    fun testUserT1() {
+        val base64encoded =
+            """Mq33DAHJY0Uc6AhaHFUp1abiWiwVvRDa8h0ckU1qqM4Digb9FKlqcXP2zR+0NbfCAxGLNOUxBVeJJ9qlJg32OGNsNg1wqtZlnLS2NkopSlwajgELRcc94PhS+7rWiNBkNIkD7OGaHvtNRXcG60UekpMK9/TjcBBK3eEgSbJGIaZkDXF9q15i7qocrGeogHKH7Uzd/GJJw/Q2Wid5y4ssfNe66FCdXsvczACcFqb7SSawhihby9b47HVqnwKEcKLeUAJPY4f1n/amvqFhDQsR9PjttLcVIPBjLY8LGgtEH3nBwEc3mCkPtA2Vxrnr4r7+smL0DEeVFXL5pCXBVx44Ng=="""
+
+        val decoded = EncryptionUtils.decodeStringToBase64Bytes(base64encoded)
+
+        val decrypted = EncryptionUtils.decryptStringAsymmetric(base64encoded, t1PrivateKey)
+
+        assertNotNull(decrypted)
     }
 
     @Test

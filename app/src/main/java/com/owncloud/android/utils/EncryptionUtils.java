@@ -469,7 +469,7 @@ public final class EncryptionUtils {
             } else if (version == 1.2) {
                 return E2EVersion.V1_2;
             } else {
-                return E2EVersion.UNKNOWN;
+                throw new IllegalStateException("Unknown version");
             }
         } catch (Exception e) {
             EncryptedFolderMetadataFile v2 = EncryptionUtils.deserializeJSON(
@@ -639,6 +639,31 @@ public final class EncryptionUtils {
         return encodeBytesToBase64String(cryptedBytes);
     }
 
+    public static String encryptStringAsymmetricV2(byte[] bytes, String cert)
+        throws NoSuchAlgorithmException,
+        NoSuchPaddingException, InvalidKeyException,
+        BadPaddingException, IllegalBlockSizeException,
+        CertificateException {
+
+        Cipher cipher = Cipher.getInstance(RSA_CIPHER);
+
+        String trimmedCert = cert.replace("-----BEGIN CERTIFICATE-----\n", "")
+            .replace("-----END CERTIFICATE-----\n", "");
+        byte[] encodedCert = trimmedCert.getBytes(StandardCharsets.UTF_8);
+        byte[] decodedCert = org.apache.commons.codec.binary.Base64.decodeBase64(encodedCert);
+
+        CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+        InputStream in = new ByteArrayInputStream(decodedCert);
+        X509Certificate certificate = (X509Certificate) certFactory.generateCertificate(in);
+        PublicKey realPublicKey = certificate.getPublicKey();
+
+        cipher.init(Cipher.ENCRYPT_MODE, realPublicKey);
+
+        byte[] cryptedBytes = cipher.doFinal(bytes);
+
+        return encodeBytesToBase64String(cryptedBytes);
+    }
+
     public static String encryptStringAsymmetric(String string, PublicKey publicKey) throws NoSuchPaddingException,
         NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
         Cipher cipher = Cipher.getInstance(RSA_CIPHER);
@@ -679,6 +704,26 @@ public final class EncryptionUtils {
 
         return decodeBase64BytesToString(encodedBytes);
         // return encodeBytesToBase64String(encodedBytes);
+    }
+
+    public static byte[] decryptStringAsymmetricV2(String string, String privateKeyString)
+        throws NoSuchAlgorithmException,
+        NoSuchPaddingException, InvalidKeyException,
+        BadPaddingException, IllegalBlockSizeException,
+        InvalidKeySpecException {
+
+        Cipher cipher = Cipher.getInstance(RSA_CIPHER);
+
+        byte[] privateKeyBytes = decodeStringToBase64Bytes(privateKeyString);
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory kf = KeyFactory.getInstance(RSA);
+        PrivateKey privateKey = kf.generatePrivate(keySpec);
+
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+
+        byte[] bytes = decodeStringToBase64Bytes(string);
+
+        return cipher.doFinal(bytes);
     }
 
     /**
@@ -1181,8 +1226,13 @@ public final class EncryptionUtils {
     }
 
     public static String lockFolder(OCFile parentFile, OwnCloudClient client) throws UploadException {
+        return lockFolder(parentFile, client, -1);
+    }
+
+    public static String lockFolder(OCFile parentFile, OwnCloudClient client, long counter) throws UploadException {
         // Lock folder
-        LockFileRemoteOperation lockFileOperation = new LockFileRemoteOperation(parentFile.getLocalId());
+        LockFileRemoteOperation lockFileOperation = new LockFileRemoteOperation(parentFile.getLocalId(),
+                                                                                counter);
         RemoteOperationResult<String> lockFileOperationResult = lockFileOperation.execute(client);
 
         if (lockFileOperationResult.isSuccess() &&
@@ -1291,7 +1341,7 @@ public final class EncryptionUtils {
                                                        new HashMap<>(),
                                                        E2EVersion.V2_0.getValue());
             metadata.getUsers().add(new DecryptedUser(client.getUserId(), publicKey));
-            String metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey());
+            byte[] metadataKey = EncryptionUtils.generateKey();
             // String encryptedMetadataKey = EncryptionUtils.encryptStringAsymmetric(metadataKey, publicKey);
             metadata.getMetadata().setMetadataKey(metadataKey);
 
