@@ -27,7 +27,7 @@ import android.content.Context;
 import android.text.TextUtils;
 
 import com.nextcloud.client.account.User;
-import com.owncloud.android.R;
+import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
@@ -39,7 +39,6 @@ import com.owncloud.android.lib.resources.files.FileUtils;
 import com.owncloud.android.lib.resources.shares.CreateShareRemoteOperation;
 import com.owncloud.android.lib.resources.shares.OCShare;
 import com.owncloud.android.lib.resources.shares.ShareType;
-import com.owncloud.android.lib.resources.users.GetPublicKeyRemoteOperation;
 import com.owncloud.android.operations.common.SyncOperation;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.EncryptionUtilsV2;
@@ -53,17 +52,19 @@ import java.util.Set;
  */
 public class CreateShareWithShareeOperation extends SyncOperation {
 
-    private String path;
-    private String shareeName;
-    private ShareType shareType;
-    private int permissions;
-    private String noteMessage;
-    private String sharePassword;
-    private boolean hideFileDownload;
-    private long expirationDateInMillis;
+    private final String path;
+    private final String shareeName;
+    private final ShareType shareType;
+    private final int permissions;
+    private final String noteMessage;
+    private final String sharePassword;
+    private final boolean hideFileDownload;
+    private final long expirationDateInMillis;
     private String label;
-    private Context context;
-    private User user;
+    private final Context context;
+    private final User user;
+
+    private ArbitraryDataProvider arbitraryDataProvider;
 
     private static final Set<ShareType> supportedShareTypes = new HashSet<>(Arrays.asList(ShareType.USER,
                                                                                           ShareType.GROUP,
@@ -93,7 +94,8 @@ public class CreateShareWithShareeOperation extends SyncOperation {
                                           boolean hideFileDownload,
                                           FileDataStorageManager storageManager,
                                           Context context,
-                                          User user) {
+                                          User user,
+                                          ArbitraryDataProvider arbitraryDataProvider) {
         super(storageManager);
 
         if (!supportedShareTypes.contains(shareType)) {
@@ -109,32 +111,25 @@ public class CreateShareWithShareeOperation extends SyncOperation {
         this.sharePassword = sharePassword;
         this.context = context;
         this.user = user;
+        this.arbitraryDataProvider = arbitraryDataProvider;
     }
 
     @Override
     protected RemoteOperationResult run(OwnCloudClient client) {
         OCFile folder = getStorageManager().getFileByDecryptedRemotePath(path);
-        boolean isEncrypted = folder != null && folder.isEncrypted();
-        String token = null;
-        RemoteOperationResult<String> keyResult = null;
 
-        // first check if sharee is using E2E
-        if (isEncrypted) {
-            keyResult = new GetPublicKeyRemoteOperation(shareeName).executeNextcloudClient(user, context);
-
-            if (!keyResult.isSuccess()) {
-                RemoteOperationResult errorResult = new RemoteOperationResult<>(new RuntimeException());
-                errorResult.setMessage(context.getString(R.string.user_not_using_e2e));
-
-                return errorResult;
-            }
+        if (folder == null) {
+            throw new IllegalArgumentException("Trying to share on a null folder: " + path);
         }
 
+        boolean isEncrypted = folder.isEncrypted();
+        String token = null;
+        long newCounter = folder.getE2eCounter() + 1;
 
         // E2E: lock folder
         if (isEncrypted) {
             try {
-                token = EncryptionUtils.lockFolder(folder, client);
+                token = EncryptionUtils.lockFolder(folder, client, newCounter);
             } catch (UploadException e) {
                 return new RemoteOperationResult(e);
             }
@@ -185,14 +180,15 @@ public class CreateShareWithShareeOperation extends SyncOperation {
             EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
 
             // add sharee to metadata
+            String publicKey = EncryptionUtils.getPublicKey(user, shareeName, arbitraryDataProvider);
             DecryptedFolderMetadataFile newMetadata = encryptionUtilsV2.addShareeToMetadata(metadata,
                                                                                             shareeName,
-                                                                                            keyResult.getResultData());
+                                                                                            publicKey);
 
             // upload metadata
-            OCFile parent = getStorageManager().getFileByDecryptedRemotePath(path);
+            metadata.getMetadata().setCounter(newCounter);
             try {
-                encryptionUtilsV2.serializeAndUploadMetadata(parent,
+                encryptionUtilsV2.serializeAndUploadMetadata(folder,
                                                              newMetadata,
                                                              token,
                                                              client,

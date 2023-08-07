@@ -72,7 +72,7 @@ import java.util.zip.GZIPOutputStream
 class EncryptionUtilsV2 {
     @VisibleForTesting
     fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: ByteArray): EncryptedMetadata {
-        val json = EncryptionUtils.serializeJSON(metadata)
+        val json = EncryptionUtils.serializeJSON(metadata, true)
         val gzip = gZipCompress(json)
 
         return EncryptionUtils.encryptStringSymmetric(
@@ -364,6 +364,8 @@ class EncryptionUtilsV2 {
         metadataFile.metadata.files[encryptedFileName] = decryptedFile
         metadataFile.metadata.counter++
 
+        // TODO change metadata key always?
+
         return metadataFile
     }
 
@@ -373,6 +375,8 @@ class EncryptionUtilsV2 {
         metadataFile: DecryptedFolderMetadataFile
     ): DecryptedFolderMetadataFile {
         metadataFile.metadata.folders[encryptedFileName] = fileName
+
+        // TODO change metadata key always?
 
         return metadataFile
     }
@@ -665,7 +669,7 @@ class EncryptionUtilsV2 {
             privateKeyString,
             publicKeyString
         )
-        val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata)
+        val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true)
         val cert = EncryptionUtils.convertCertFromString(publicKeyString)
         val privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString)
 
@@ -690,7 +694,11 @@ class EncryptionUtilsV2 {
                 .execute(client)
         }
         if (!uploadMetadataOperationResult.isSuccess) {
-            throw UploadException("Storing/updating metadata was not successful")
+            if (metadataExists) {
+                throw UploadException("Updating metadata was not successful")
+            } else {
+                throw UploadException("Storing metadata was not successful")
+            }
         }
     }
 

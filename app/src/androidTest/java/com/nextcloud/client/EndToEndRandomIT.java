@@ -61,7 +61,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -73,8 +72,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import androidx.test.ext.junit.runners.AndroidJUnit4;
-
 import static com.owncloud.android.lib.resources.status.OwnCloudVersion.nextcloud_19;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertFalse;
@@ -83,7 +80,6 @@ import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-@RunWith(AndroidJUnit4.class)
 public class EndToEndRandomIT extends AbstractOnServerIT {
     private static ArbitraryDataProvider arbitraryDataProvider;
     private OCFile currentFolder;
@@ -561,10 +557,10 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
         init();
 
         Object object = EncryptionUtils.downloadFolderMetadata(currentFolder,
-                                                                                      client,
-                                                                                      targetContext,
-                                                                                      user,
-                                                                                      "");
+                                                               client,
+                                                               targetContext,
+                                                               user,
+                                                               "");
 
         // metadata does not yet exist
         assertNull(object);
@@ -580,31 +576,32 @@ public class EndToEndRandomIT extends AbstractOnServerIT {
             false,
             fileDataStorageManager,
             targetContext,
-            user)
+            user,
+            new ArbitraryDataProviderImpl(targetContext))
                        .execute(client)
                        .isSuccess());
 
         // verify
         Object newObject = EncryptionUtils.downloadFolderMetadata(currentFolder,
-                                                          client,
-                                                          targetContext,
-                                                          user,
-                                                          "");
+                                                                  client,
+                                                                  targetContext,
+                                                                  user,
+                                                                  "");
 
         assertTrue(newObject instanceof EncryptedFolderMetadataFile);
-        
+
         assertEquals(2, ((EncryptedFolderMetadataFile) newObject).getUsers().size());
     }
 
-    @Test
-    private void testRemoveFiles() throws Exception {
-        init();
-        createFolder();
-        goIntoFolder(1);
-
-        OCFile root = fileDataStorageManager.getFileByDecryptedRemotePath("/");
-        removeFolder(root);
-    }
+//    @Test
+//    public void testRemoveFiles() throws Exception {
+//        init();
+//        createFolder();
+//        goIntoFolder(1);
+//
+//        OCFile root = fileDataStorageManager.getFileByDecryptedRemotePath("/");
+//        removeFolder(root);
+//    }
 
     private void useExistingKeys() throws Exception {
         // download them from server

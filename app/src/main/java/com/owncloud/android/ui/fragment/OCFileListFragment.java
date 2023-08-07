@@ -76,7 +76,6 @@ import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.SyncedFolderProvider;
 import com.owncloud.android.datamodel.VirtualFolderType;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
-import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.Creator;
 import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
@@ -85,7 +84,6 @@ import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.ToggleEncryptionRemoteOperation;
 import com.owncloud.android.lib.resources.files.SearchRemoteOperation;
 import com.owncloud.android.lib.resources.files.ToggleFavoriteRemoteOperation;
-import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.ui.activity.FileActivity;
 import com.owncloud.android.ui.activity.FileDisplayActivity;
@@ -128,8 +126,6 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -1764,38 +1760,47 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 boolean metadataExists = metadataPair.first;
                 DecryptedFolderMetadataFile metadata = metadataPair.second;
 
-                EncryptedFolderMetadataFile encryptedFolderMetadata = new EncryptionUtilsV2()
-                    .encryptFolderMetadataFile(metadata,
-                                               folder,
-                                               mContainerActivity.getStorageManager(),
-                                               client,
-                                               client.getUserId(),
-                                               privateKeyString,
-                                               publicKeyString);
+                new EncryptionUtilsV2().serializeAndUploadMetadata(folder,
+                                                                   metadata,
+                                                                   token,
+                                                                   client,
+                                                                   storageManager,
+                                                                   metadataExists,
+                                                                   requireContext(),
+                                                                   user);
 
-                String serializedFolderMetadata;
-
-                // check if we need metadataKeys
-                if (metadata.getMetadata().getMetadataKey() != null) {
-                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true);
-                } else {
-                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata);
-                }
-
-                // upload metadata
-                X509Certificate certificate = EncryptionUtils.convertCertFromString(publicKeyString);
-                PrivateKey privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString);
-                String signature = new EncryptionUtilsV2().getMessageSignature(certificate,
-                                                                               privateKey,
-                                                                               serializedFolderMetadata);
-                
-                EncryptionUtils.uploadMetadata(folder,
-                                               serializedFolderMetadata,
-                                               token,
-                                               client,
-                                               metadataExists,
-                                               E2EVersion.V2_0,
-                                               signature);
+//                EncryptedFolderMetadataFile encryptedFolderMetadata = new EncryptionUtilsV2()
+//                    .encryptFolderMetadataFile(metadata,
+//                                               folder,
+//                                               mContainerActivity.getStorageManager(),
+//                                               client,
+//                                               client.getUserId(),
+//                                               privateKeyString,
+//                                               publicKeyString);
+//
+//                String serializedFolderMetadata;
+//
+//                // check if we need metadataKeys
+//                if (metadata.getMetadata().getMetadataKey() != null) {
+//                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true);
+//                } else {
+//                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata);
+//                }
+//
+//                // upload metadata
+//                X509Certificate certificate = EncryptionUtils.convertCertFromString(publicKeyString);
+//                PrivateKey privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString);
+//                String signature = new EncryptionUtilsV2().getMessageSignature(certificate,
+//                                                                               privateKey,
+//                                                                               serializedFolderMetadata);
+//                
+//                EncryptionUtils.uploadMetadata(folder,
+//                                               serializedFolderMetadata,
+//                                               token,
+//                                               client,
+//                                               metadataExists,
+//                                               E2EVersion.V2_0,
+//                                               signature);
 
                 // unlock folder
                 EncryptionUtils.unlockFolder(folder, client, token);

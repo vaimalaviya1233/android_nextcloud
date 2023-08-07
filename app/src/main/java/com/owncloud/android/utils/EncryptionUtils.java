@@ -721,7 +721,12 @@ public final class EncryptionUtils {
 
         cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-        byte[] bytes = decodeStringToBase64Bytes(string);
+        byte[] bytes;
+        try {
+            bytes = decodeStringToBase64Bytes(string);
+        } catch (Exception e) {
+            bytes = encodeStringToBase64Bytes(string);
+        }
 
         return cipher.doFinal(bytes);
     }

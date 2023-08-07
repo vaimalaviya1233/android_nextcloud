@@ -26,6 +26,7 @@ import com.nextcloud.client.preferences.DarkMode;
 import com.nextcloud.common.NextcloudClient;
 import com.nextcloud.java.util.Optional;
 import com.nextcloud.test.GrantStoragePermissionRule;
+import com.nextcloud.test.RandomStringGenerator;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.UploadsStorageManager;
@@ -319,7 +320,8 @@ public abstract class AbstractIT {
                                 .execute(client)
                                 .isSuccess());
 
-        return getStorageManager().getFileByDecryptedRemotePath(remotePath);
+
+        return getStorageManager().getFileByDecryptedRemotePath(remotePath.endsWith("/") ? remotePath : remotePath + "/");
     }
 
     public void uploadFile(File file, String remotePath) {
@@ -431,6 +433,14 @@ public abstract class AbstractIT {
 
     public static String getUserId(User user) {
         return AccountManager.get(targetContext).getUserData(user.toPlatformAccount(), KEY_USER_ID);
+    }
+
+    public String getRandomName() {
+        return getRandomName(5);
+    }
+
+    public String getRandomName(int length) {
+        return RandomStringGenerator.make(length);
     }
 
     protected static User getUser(Account account) {

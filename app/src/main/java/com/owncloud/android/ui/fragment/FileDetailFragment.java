@@ -734,14 +734,18 @@ public class FileDetailFragment extends FileFragment implements OnClickListener,
 
     /**
      * open the sharing process fragment for creating new share
+     *
      * @param shareeName
      * @param shareType
      */
-    public void initiateSharingProcess(String shareeName, ShareType shareType) {
+    public void initiateSharingProcess(String shareeName,
+                                       ShareType shareType,
+                                       boolean secureShare) {
         requireActivity().getSupportFragmentManager().beginTransaction().add(R.id.sharing_frame_container,
                                                                              FileDetailsSharingProcessFragment.newInstance(getFile(),
                                                                                                                            shareeName,
-                                                                                                                           shareType),
+                                                                                                                           shareType,
+                                                                                                                           secureShare),
                                                                              FileDetailsSharingProcessFragment.TAG)
             .commit();
 

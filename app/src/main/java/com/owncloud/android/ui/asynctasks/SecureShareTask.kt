@@ -45,19 +45,27 @@ class SecureShareTask(
     private val fileOperationsHelper: FileOperationsHelper,
     val file: OCFile,
     private val activityWeakReference: WeakReference<FileActivity>
-) : AsyncTask<Void, Void, Boolean>() {
-    override fun doInBackground(vararg params: Void): Boolean {
-        val result = share()
+) : AsyncTask<Void, Void, Int>() {
+    override fun onPreExecute() {
+        super.onPreExecute()
+
+        activityWeakReference.get()?.let {
+            it.showLoadingDialog(it.getString(R.string.wait_a_moment))
+        }
+    }
+
+    override fun doInBackground(vararg params: Void): Int {
+        return share()
+    }
+
+    override fun onPostExecute(result: Int) {
+        super.onPostExecute(result)
 
         if (result != 0) {
-            val activity = activityWeakReference.get()
-
-            if (activity != null) {
-                DisplayUtils.showSnackMessage(activity, result)
+            activityWeakReference.get()?.let {
+                DisplayUtils.showSnackMessage(it, result)
             }
         }
-
-        return true
     }
 
     private fun share(): Int {
@@ -65,7 +73,7 @@ class SecureShareTask(
         try {
             val nextcloudClient: NextcloudClient = clientFactory.createNextcloudClient(currentUser)
             val result = GetPublicKeyRemoteOperation(shareeName).execute(nextcloudClient)
-            if (result.isSuccess) {
+            if (result.isSuccess) { // TODO check first if we already have it, TOFU!
                 // store it
                 EncryptionUtils.savePublicKey(
                     currentUser,
@@ -77,7 +85,7 @@ class SecureShareTask(
                 return R.string.secure_share_not_set_up
             }
 
-            // , no option, thus directly share it
+            // no option, thus directly share it
             fileOperationsHelper.shareFileWithSharee(
                 file,
                 shareeName,
@@ -87,7 +95,8 @@ class SecureShareTask(
                 null,
                 -1,
                 "",
-                null
+                null,
+                false
             )
         } catch (e: Exception) {
             R.string.secure_sharing_failed

@@ -43,6 +43,7 @@ import com.nextcloud.client.account.User;
 import com.nextcloud.client.account.UserAccountManager;
 import com.nextcloud.java.util.Optional;
 import com.owncloud.android.MainApp;
+import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.lib.common.OwnCloudAccount;
@@ -139,6 +140,7 @@ public class OperationsService extends Service {
         mUndispatchedFinishedOperations = new ConcurrentHashMap<>();
 
     @Inject UserAccountManager accountManager;
+    @Inject ArbitraryDataProvider arbitraryDataProvider;
 
     private static class Target {
         public Uri mServerUrl;
@@ -610,7 +612,8 @@ public class OperationsService extends Service {
                                                                    hideFileDownload,
                                                                    fileDataStorageManager,
                                                                    getApplicationContext(),
-                                                                   user);
+                                                                   user,
+                                                                   arbitraryDataProvider);
 
                             if (operationIntent.hasExtra(EXTRA_SHARE_PUBLIC_LABEL)) {
                                 createShareWithShareeOperation.setLabel(operationIntent.getStringExtra(EXTRA_SHARE_PUBLIC_LABEL));

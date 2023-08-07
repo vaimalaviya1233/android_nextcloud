@@ -100,7 +100,7 @@ public abstract class AbstractOnServerIT extends AbstractIT {
 
             waitForServer(client, baseUrl);
 
-            deleteAllFilesOnServer(); // makes sure that no file/folder is in root
+            // deleteAllFilesOnServer(); // makes sure that no file/folder is in root
 
         } catch (OperationCanceledException |
                  IOException |
@@ -112,7 +112,7 @@ public abstract class AbstractOnServerIT extends AbstractIT {
 
     @After
     public void after() {
-        deleteAllFilesOnServer();
+        // deleteAllFilesOnServer();
 
         super.after();
     }

@@ -34,7 +34,6 @@ import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFi
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedMetadata
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedUser
 import com.owncloud.android.datamodel.e2e.v2.encrypted.EncryptedFolderMetadataFile
-import com.owncloud.android.lib.resources.status.E2EVersion
 import com.owncloud.android.util.EncryptionTestIT
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
@@ -43,6 +42,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class EncryptionUtilsV2IT : AbstractIT() {
+    private val encryptionTestUtils = EncryptionTestUtils()
+    private val encryptionUtilsV2 = EncryptionUtilsV2()
+
     private val enc1UserId = "enc1"
     private val enc1PrivateKey = """
         MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAo
@@ -147,32 +149,10 @@ class EncryptionUtilsV2IT : AbstractIT() {
         2J9mW5WvAAaG+j28Q/GKSuE=
     """.trimIndent()
 
-    private val t1PrivateKey =
-        "MIIEugIBADANBgkqhkiG9w0BAQEFAASCBKQwggSgAgEAAoIBAQC1p8eYMFwGoi7geYzEwNbePRLL5LRhorAecFG3zkpLBwSi/QHkU4u4uSegEbHgOfe73eKVOFdfFpw8wd5cvtY+4CzbX8bu+yrC+tFGcJ25/4VQ78Bl4MI0SvOmxDwuZNrg9SWgs9RwialKOsfCEyz0SS8RstGNt5KZKn1e8z7V9X/eORPmOQ5KcIXHlMbAY3m4erBSKvhRZdqy+Dbnc0rZeZaKkoIMJH1OYfVto/ek12iIKF2YStPVzoTgNsFelPDxeA/lltgf6qDVRD+ELydEncPIJwcv52D8ZitoEyEOfjDZW+rvvE02g1ZD1xPkDLpwltAsFCglCKvKBAWuhthFAgMBAAECgf8BN1MLcq+6m8C1tzNvN/UDd9c0rUpexM6D5eC4O+6B7YGidEqIhHVIzUj0e2HUgpRBbURxsvF1FWdIT2gu7dnULtOGWQxNujJ0kGwXfAnqxh/rACDFb5TS3sJawEExC5yJw14bCEbE/0uBF5uiTU/U9AV7PKHlqAKsS2RtcwPNceB8zDu0hh/Mb/uS7274TsxUllx0WzGZrozO1K6AlOete9rXmmpghpFTNVhxgf0pxe3hrK+tZGSL9di+Wft9eCvSbdG/FzeXgwVqmGtWU7kSB7FqstEEJO4VpOSyEfcXGHTHwdZjrhBUuAcjWE8E0mCKa8htRE52czb3C0f7ZYkCgYEA5eH3vmHEgQjXzSSEtbmDLRq9X9SB7pIAIXHj2UuEOTkLUJ/7xLTHqt82jqZaZzns1RZIJXKZjH85CswQp/py2/qD240KvA/N+ELZaciaV+Wg+m4+iHdi0DyPkaKaBtFG1nsR2GbVWO1OsaTUZTG4D7RCUErU6XVmNPQKSk5uRA0CgYEAykskpX3KKuWq5nxV4vwgPmxz+uAfCtaGhcPEUg764SR+n0ODAvGiEJU7B0Q2oX621pDOQeRfFufiMWfD8ByhErs1HFCmW69YPlR8qamfc8tHG5UM+r3bb49sDEYU4qr1Ji5Zzs4XgfmToKLbWdzzhaW6YxqO7NntIIh2169PPxkCgYBF2TAWl8xGTLKNcYAlW1XBObO6z24fWBtUDi/mEWz+mheXCtVMAoX8pFAGbgNgBBiy8k8/mZ+QMgPaBQE2mQGXV3oDFsrhM4go298Fpl9HP8126lJz0pqinRQecyKL2cDFYKWedDh1Cb30ehnTGZVMqD/R97rTqMlCY7hQtZ4JbQKBgEXpLDQJQeoLT0GybJgyXA5WuspT1EaRlxH5cwqM5MUUMLJnyYol6cVjXXAIcfzj5tpGVxHMk9Q9tR0v6DY+HqhzjEpJ0QRUl+GKnz6fQVzqPpvYqhCptoFahpPDUIp5XJmiYSUoclVX5F4aikYHJx3kBYMkdYqDUgDxSGkHzBJZAoGAHV44xgTW02dgeB5GfDJVWCJKAUGsYOFuUehKUBXSJ0929hdP0sjOQDJN3DEDISzmgdWX5NyLJxEYgFWNivpePjWCWzOzyua3nPSpvxPIUB7xh27gjT91glj1hEmysCd7+9yoMPiCXR7iigRycxegI/Krd39QzISSk9O0finfytU="
-
-    private val t1PublicKey = """-----BEGIN CERTIFICATE-----
-MIIC6DCCAdCgAwIBAgIBADANBgkqhkiG9w0BAQUFADANMQswCQYDVQQDDAJ0MTAe
-Fw0yMzA3MjUwNzU3MTJaFw00MzA3MjAwNzU3MTJaMA0xCzAJBgNVBAMMAnQxMIIB
-IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtafHmDBcBqIu4HmMxMDW3j0S
-y+S0YaKwHnBRt85KSwcEov0B5FOLuLknoBGx4Dn3u93ilThXXxacPMHeXL7WPuAs
-21/G7vsqwvrRRnCduf+FUO/AZeDCNErzpsQ8LmTa4PUloLPUcImpSjrHwhMs9Ekv
-EbLRjbeSmSp9XvM+1fV/3jkT5jkOSnCFx5TGwGN5uHqwUir4UWXasvg253NK2XmW
-ipKCDCR9TmH1baP3pNdoiChdmErT1c6E4DbBXpTw8XgP5ZbYH+qg1UQ/hC8nRJ3D
-yCcHL+dg/GYraBMhDn4w2Vvq77xNNoNWQ9cT5Ay6cJbQLBQoJQirygQFrobYRQID
-AQABo1MwUTAdBgNVHQ4EFgQUE9zCeA9/QMAtVgLxD23X6ZcodhMwHwYDVR0jBBgw
-FoAUE9zCeA9/QMAtVgLxD23X6ZcodhMwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG
-9w0BAQUFAAOCAQEAZdy/YjJlvnz3FQwxp6oVtMJccpdxveEPfLzgaverhtd/vP8O
-AvDzOLgQJHmrDS91SG503eU4cYGyuNKwd77OyTnqMg+GUEmJhGfPpSVrEIdh65jv
-q61T4oqBdehevVmBq54rGiwL0DGv1DlXQlwiJZP4qni2KnOEFcnvL3gVtRnQjXQ+
-kHvlMshkK6w021EMV5NfjG2zg67wC65rLaej5f6Ssp2S7g2VtmE4aXq1bjAuEbqk
-4TiyZHLDdsJuqzyGyyOpMV7i9ucXDoaZt9cGS9hT2vRxTrSH63vKR8Xeig9+stLw
-t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
------END CERTIFICATE-----"""
 
     @Test
     fun testEncryptDecryptMetadata() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-        val metadataKey = EncryptionUtils.generateKeyString()
+        val metadataKey = EncryptionUtils.generateKey()
 
         val metadata = DecryptedMetadata(
             mutableListOf("hash1", "hash of key 2"),
@@ -250,16 +230,15 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun testEncryptDecryptUser() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
         val metadataKeyBase64 = EncryptionUtils.generateKeyString()
         val metadataKey = EncryptionUtils.decodeStringToBase64Bytes(metadataKeyBase64)
 
-        val user = DecryptedUser("t1", t1PublicKey)
+        val user = DecryptedUser("t1", encryptionTestUtils.t1PublicKey)
 
         val encryptedUser = encryptionUtilsV2.encryptUser(user, metadataKey)
         assertNotEquals(encryptedUser.encryptedMetadataKey, metadataKeyBase64)
 
-        val decryptedMetadataKey = encryptionUtilsV2.decryptMetadataKey(encryptedUser, t1PrivateKey)
+        val decryptedMetadataKey = encryptionUtilsV2.decryptMetadataKey(encryptedUser, encryptionTestUtils.t1PrivateKey)
         val decryptedMetadataKeyBase64 = EncryptionUtils.encodeBytesToBase64String(decryptedMetadataKey)
 
         assertEquals(metadataKeyBase64, decryptedMetadataKeyBase64)
@@ -272,15 +251,13 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
         val decoded = EncryptionUtils.decodeStringToBase64Bytes(base64encoded)
 
-        val decrypted = EncryptionUtils.decryptStringAsymmetric(base64encoded, t1PrivateKey)
+        val decrypted = EncryptionUtils.decryptStringAsymmetric(base64encoded, encryptionTestUtils.t1PrivateKey)
 
         assertNotNull(decrypted)
     }
 
     @Test
     fun testEncryptDecryptMetadataFile() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val folder = OCFile("/enc")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
@@ -290,7 +267,7 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
             folder,
             storageManager,
             client,
-            client.userId,
+            enc1.accountName,
             enc1PrivateKey,
             enc1Cert
         )
@@ -308,8 +285,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun addFile() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
@@ -332,8 +307,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun removeFile() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
@@ -347,8 +320,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun renameFile() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
@@ -367,8 +338,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun addFolder() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
@@ -386,8 +355,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun removeFolder() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         assertEquals(2, metadataFile.metadata.files.size)
@@ -419,8 +386,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun verifyMetadata() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
 
@@ -443,7 +408,7 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
     @Test
     fun testMigrateDecryptedV1ToV2() {
         val v1 = generateDecryptedFileV1()
-        val v2 = EncryptionUtilsV2().migrateDecryptedFileV1ToV2(v1)
+        val v2 = encryptionUtilsV2.migrateDecryptedFileV1ToV2(v1)
 
         assertEquals(v1.encrypted.filename, v2.filename)
         assertEquals(v1.encrypted.mimetype, v2.mimetype)
@@ -475,7 +440,7 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
                 )
             )
         }
-        val v2 = EncryptionUtilsV2().migrateV1ToV2(v1, enc1UserId, enc1Cert)
+        val v2 = encryptionUtilsV2.migrateV1ToV2(v1, enc1UserId, enc1Cert)
 
         assertEquals(v1.files.size, v2.metadata.files.size)
         assertEquals(1, v2.users.size) // only one user upon migration
@@ -483,8 +448,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun addSharee() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val enc2 = MockUser("enc2", "Nextcloud")
         val folder = OCFile("/enc/")
@@ -525,8 +488,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun removeSharee() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val enc1 = MockUser("enc1", "Nextcloud")
         val enc2 = MockUser("enc2", "Nextcloud")
         var metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
@@ -540,8 +501,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
     }
 
     private fun generateDecryptedFolderMetadataFile(user: User, cert: String): DecryptedFolderMetadataFile {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val metadata = DecryptedMetadata(
             mutableListOf("hash1", "hash of key 2"),
             false,
@@ -573,7 +532,7 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
                     )
                 )
             ),
-            EncryptionUtils.generateKeyString()
+            EncryptionUtils.generateKey()
         )
 
         val users = mutableListOf(
@@ -587,8 +546,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun testGZip() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val string = """
             This is a test.
             This is a test.
@@ -617,8 +574,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun gunzip() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
         val string = "H4sICNVkD2QAAwArycgsVgCiRIWS1OISPQDD9wZODwAAAA=="
         val decoded = EncryptionUtils.decodeStringToBase64Bytes(string)
         val gunzip = encryptionUtilsV2.gZipDecompress(decoded)
@@ -686,15 +641,15 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 -----END CERTIFICATE-----"""
 
         val t1cert = EncryptionUtils.convertCertFromString(t1String)
-        val t1PrivateKeyKey = EncryptionUtils.PEMtoPrivateKey(t1PrivateKey)
+        val t1PrivateKeyKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
 
-        // val signed = EncryptionUtilsV2().getMessageSignature(
+        // val signed = encryptionUtilsV2.getMessageSignature(
         //     t1cert,
         //     t1PrivateKeyKey,
         //     metadataFile
         // )
 
-        assertTrue(EncryptionUtilsV2().verifySignedMessage(signature1, metadata1, listOf(certJohn, t1cert)))
+        assertTrue(encryptionUtilsV2.verifySignedMessage(signature1, metadata1, listOf(certJohn, t1cert)))
     }
 
     @Test
@@ -703,10 +658,8 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
             """{"metadata": {"authenticationTag": "zMozev5R09UopLrq7Je1lw==","ciphertext": "j0OBtUrEt4IveGiexjmGK7eKEaWrY70ZkteA5KxHDaZT/t2wwGy9j2FPQGpqXnW6OO3iAYPNgwFikI1smnfNvqdxzVDvhavl/IXa9Kg2niWyqK3D9zpz0YD6mDvl0XsOgTNVyGXNVREdWgzGEERCQoyHI1xowt/swe3KCXw+lf+XPF/t1PfHv0DiDVk70AeWGpPPPu6yggAIxB4Az6PEZhaQWweTC0an48l2FHj2MtB2PiMHtW2v7RMuE8Al3PtE4gOA8CMFrB+Npy6rKcFCXOgTZm5bp7q+J1qkhBDbiBYtvdsYujJ52Xa5SifTpEhGeWWLFnLLgPAQ8o6bXcWOyCoYfLfp4Jpft/Y7H8qzHbPewNSyD6maEv+xljjfU7hxibbszz5A4JjMdQy2BDGoTmJx7Mas+g6l6ZuHLVbdmgQOvD3waJBy6rOg0euux0Cn4bB4bIFEF2KvbhdGbY1Uiq9DYa7kEmSEnlcAYaHyroTkDg4ew7ER0vIBBMzKM3r+UdPVKKS66uyXtZc=","nonce": "W+lxQJeGq7XAJiGfcDohkg=="},"users": [{"certificate": "-----BEGIN CERTIFICATE-----\nMIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJERTEb\nMBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx\nEjAQBgNVBAoMCU5leHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0\nNTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRFMRswGQYDVQQIDBJCYWRl\nbi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4\ndGNsb3VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\nCgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E1AVnt98rvp3DmEfBHNzNB+DS9IBDkS\nSXM/YtfAci6Tcw8ujVBjrZX/WEmrf8ynQHxYmSaJSnP8uAT306/MceZpdpruEc9/\nS10a7vp54Zbld4NYdmfS71oVFVKgM7c/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT\nnjz2Za/R68uXpxfz7J9uEXYiqsAs/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp\nUthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1abQRxcu2CYnVo\n6Y0mTxhKhQS/n5gjv3ExiQF3wp/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB\ntv70fTGkXWGAueDp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw\nDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAyVtq9XAvW7nxSW/8\nhp30z6xbzGiuviXhy/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi\n6dg/7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB\nMz2zsSrOGPj1YsYOl/U8FU6KA7Yj7U3q7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid\nvigCCLByiccmS/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK/y3d8B8mh\nUtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P\nnDO4ew==\n-----END CERTIFICATE-----\n","encryptedMetadataKey": "HVT49bYmwXbGs/dJ2avgU9unrKnPf03MYUI5ZysSR1Bz5pqz64gzH2GBAuUJ+Q4VmHtEfcMaWW7VXgzfCQv5xLBrk+RSgcLOKnlIya8jaDlfttWxbe8jJK+/0+QVPOc6ycA/t5HNCPg09hzj+gnb2L89UHxL5accZD0iEzb5cQbGrc/N6GthjgGrgFKtFf0HhDVplUr+DL9aTyKuKLBPjrjuZbv8M6ZfXO93mOMwSZH3c3rwDUHb/KEaTR/Og4pWQmrqr1VxGLqeV/+GKWhzMYThrOZAUz+5gsbckU2M5V9i+ph0yBI5BjOZVhNuDwW8yP8WtyRJwQc+UBRei/RGBQ==","userId": "john"}],"version": "2"}"""
         val base64Metadata = EncryptionUtils.encodeStringToBase64String(metadata)
 
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-
-        val privateKey = EncryptionUtils.PEMtoPrivateKey(t1PrivateKey)
-        val certificateT1 = EncryptionUtils.convertCertFromString(t1PublicKey)
+        val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
+        val certificateT1 = EncryptionUtils.convertCertFromString(encryptionTestUtils.t1PublicKey)
         val certificateEnc2 = EncryptionUtils.convertCertFromString(enc2Cert)
 
         val signed = encryptionUtilsV2.signMessage(
@@ -728,7 +681,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun sign() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
         val enc1 = MockUser("enc1", "Nextcloud")
         //val sut = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         // val json = EncryptionUtils.serializeJSON(sut, true)
@@ -736,8 +688,8 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
         val sut = "randomstring123"
         val json = "randomstring123"
 
-        val privateKey = EncryptionUtils.PEMtoPrivateKey(t1PrivateKey)
-        val certificate = EncryptionUtils.convertCertFromString(t1PublicKey)
+        val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
+        val certificate = EncryptionUtils.convertCertFromString(encryptionTestUtils.t1PublicKey)
 
         val signed = encryptionUtilsV2.signMessage(
             certificate,
@@ -758,7 +710,6 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Test
     fun signWindows() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
         val enc1 = MockUser("enc1", "Nextcloud")
         //val sut = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         // val json = EncryptionUtils.serializeJSON(sut, true)
@@ -766,8 +717,8 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
         val sut = "windowsrandomstring123"
         val json = "windowsrandomstring123"
 
-        val privateKey = EncryptionUtils.PEMtoPrivateKey(t1PrivateKey)
-        val certificate = EncryptionUtils.convertCertFromString(t1PublicKey)
+        val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
+        val certificate = EncryptionUtils.convertCertFromString(encryptionTestUtils.t1PublicKey)
 
         val base64Ans =
             """MIIFSAYJKoZIhvcNAQcCoIIFOTCCBTUCAQExDTALBglghkgBZQMEAgEwCwYJKoZIhvcNAQcBoIIC7DCCAugwggHQoAMCAQICAQAwDQYJKoZIhvcNAQEFBQAwDTELMAkGA1UEAwwCdDEwHhcNMjMwNzI1MDc1NzEyWhcNNDMwNzIwMDc1NzEyWjANMQswCQYDVQQDDAJ0MTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALWnx5gwXAaiLuB5jMTA1t49EsvktGGisB5wUbfOSksHBKL9AeRTi7i5J6ARseA597vd4pU4V18WnDzB3ly+1j7gLNtfxu77KsL60UZwnbn/hVDvwGXgwjRK86bEPC5k2uD1JaCz1HCJqUo6x8ITLPRJLxGy0Y23kpkqfV7zPtX1f945E+Y5DkpwhceUxsBjebh6sFIq+FFl2rL4NudzStl5loqSggwkfU5h9W2j96TXaIgoXZhK09XOhOA2wV6U8PF4D+WW2B/qoNVEP4QvJ0Sdw8gnBy/nYPxmK2gTIQ5+MNlb6u+8TTaDVkPXE+QMunCW0CwUKCUIq8oEBa6G2EUCAwEAAaNTMFEwHQYDVR0OBBYEFBPcwngPf0DALVYC8Q9t1+mXKHYTMB8GA1UdIwQYMBaAFBPcwngPf0DALVYC8Q9t1+mXKHYTMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEFBQADggEBAGXcv2IyZb589xUMMaeqFbTCXHKXcb3hD3y84Gr3q4bXf7z/DgLw8zi4ECR5qw0vdUhudN3lOHGBsrjSsHe+zsk56jIPhlBJiYRnz6UlaxCHYeuY76utU+KKgXXoXr1ZgaueKxosC9Axr9Q5V0JcIiWT+Kp4tipzhBXJ7y94FbUZ0I10PpB75TLIZCusNNtRDFeTX4xts4Ou8Auuay2no+X+krKdku4NlbZhOGl6tW4wLhG6pOE4smRyw3bCbqs8hssjqTFe4vbnFw6GmbfXBkvYU9r0cU60h+t7ykfF3ooPfrLS8LfTjXFKgij+4XfK2o7cTOCSCERMcA/DpIAEVhoxggIiMIICHgIBATASMA0xCzAJBgNVBAMMAnQxAgEAMAsGCWCGSAFlAwQCAaCB5DAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzA3MjgxMjIwMTNaMC8GCSqGSIb3DQEJBDEiBCDKmcDaHONFCK8DWr0lJwfBQdlmVSyyqgzpplVlVIndxzB5BgkqhkiG9w0BCQ8xbDBqMAsGCWCGSAFlAwQBKjALBglghkgBZQMEARYwCwYJYIZIAWUDBAECMAoGCCqGSIb3DQMHMA4GCCqGSIb3DQMCAgIAgDANBggqhkiG9w0DAgIBQDAHBgUrDgMCBzANBggqhkiG9w0DAgIBKDANBgkqhkiG9w0BAQEFAASCAQCcaKwRe3TPumGkPEXrOgk4kJuNLrF7GLI+wGwaM8rwOxlfC6mG/Oz+v66WJok2LdvH64wwl/hdJO1n1PYQxVm0FHMntwGKjyuXMdo+VZEbEE6+T36hHTh1y0tDf4Z/DM0/QyEegqqw59+H9crzNMyw8r8xx6dAjiB3zku7QXBN3bkBfeilRELRN5HHUiMAuqXkYMPWQzNcTNC8VCqGMwlHKu6FcXFrnXiqd9O2AidvUI8vp3b4GKQEfhKxyiUzJYyk68+KQA3MaM6ybrWZ126aAUUQ4MdqYTxqHQnG09D9bFpKS7zIrLC7TIUhnkM1PLygLz46ekIIn2IJlsvZ6ZsH"""
@@ -788,8 +739,8 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
     @Test
     @Throws(Exception::class)
     fun encryptionMetadataV2() {
-        val encryptionUtilsV2 = EncryptionUtilsV2()
-        val decryptedFolderMetadata1: DecryptedFolderMetadataFile = generateFolderMetadataV2()
+        val decryptedFolderMetadata1: DecryptedFolderMetadataFile =
+            EncryptionTestUtils().generateFolderMetadataV2(client.userId, EncryptionTestIT.privateKey)
         val root = OCFile("/")
         root.localId = 0
         val folder = OCFile("/enc")
@@ -820,7 +771,7 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
         )
 
         // decrypt
-        val decryptedFolderMetadata2 = EncryptionUtilsV2().decryptFolderMetadataFile(
+        val decryptedFolderMetadata2 = encryptionUtilsV2.decryptFolderMetadataFile(
             encryptedFolderMetadata2!!,
             getUserId(user),
             EncryptionTestIT.privateKey,
@@ -836,54 +787,5 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
                 EncryptionUtils.serializeJSON(decryptedFolderMetadata2)
             )
         )
-    }
-
-    @Throws(java.lang.Exception::class)
-    private fun generateFolderMetadataV2(): DecryptedFolderMetadataFile {
-        var metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey())
-        val encryptedMetadataKey: String =
-            EncryptionUtils.encryptStringAsymmetric(metadataKey, EncryptionTestIT.publicKey)
-
-        val metadata = DecryptedMetadata().apply {
-            metadataKey = encryptedMetadataKey
-        }
-
-        val file1 = DecryptedFile(
-            "image1.png",
-            "image/png",
-            "gKm3n+mJzeY26q4OfuZEqg==",
-            "PboI9tqHHX3QeAA22PIu4w==",
-            "WANM0gRv+DhaexIsI0T3Lg=="
-        )
-
-        val file2 = DecryptedFile(
-            "image2.png",
-            "image/png",
-            "hnJLF8uhDvDoFK4ajuvwrg==",
-            "qOQZdu5soFO77Y7y4rAOVA==",
-            "9dfzbIYDt28zTyZfbcll+g=="
-        )
-
-        val users = mutableListOf(
-            DecryptedUser(client.userId, EncryptionTestIT.publicKey)
-        )
-
-        val filedrop = mutableMapOf(
-            Pair(
-                "eie8iaeiaes8e87td6",
-                DecryptedFile(
-                    "test2.txt",
-                    "txt/plain",
-                    "hnJLF8uhDvDoFK4ajuvwrg==",
-                    "qOQZdu5soFO77Y7y4rAOVA==",
-                    "9dfzbIYDt28zTyZfbcll+g=="
-                )
-            )
-        )
-
-        metadata.files["ia7OEEEyXMoRa1QWQk8r"] = file1
-        metadata.files["n9WXAIXO2wRY4R8nXwmo"] = file2
-
-        return DecryptedFolderMetadataFile(metadata, users, filedrop, E2EVersion.V2_0.value)
     }
 }
