@@ -205,11 +205,15 @@ class EncryptionUtilsV2 {
                 decryptedMetadataKey
             )
 
-            return DecryptedFolderMetadataFile(
+            val decryptedFolderMetadataFile = DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 users,
                 mutableMapOf() // TODO
             )
+
+            verifyMetadata(decryptedFolderMetadataFile, oldCounter, ans)
+
+            return decryptedFolderMetadataFile
         }
     }
 
@@ -475,7 +479,7 @@ class EncryptionUtilsV2 {
             object : TypeToken<EncryptedFolderMetadataFile>() {}
         )
 
-        val decryptedFolderMetadata = if (v2.version == "2.0") {
+        val decryptedFolderMetadata = if (v2.version == "2.0" || v2.version == "2") {
             val userId = AccountManager.get(context).getUserData(
                 user.toPlatformAccount(),
                 AccountUtils.Constants.KEY_USER_ID

@@ -27,6 +27,10 @@ import android.content.Context;
 import android.text.TextUtils;
 
 import com.nextcloud.client.account.User;
+import com.nextcloud.client.network.ClientFactory;
+import com.nextcloud.client.network.ClientFactoryImpl;
+import com.nextcloud.common.NextcloudClient;
+import com.owncloud.android.R;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
@@ -39,6 +43,7 @@ import com.owncloud.android.lib.resources.files.FileUtils;
 import com.owncloud.android.lib.resources.shares.CreateShareRemoteOperation;
 import com.owncloud.android.lib.resources.shares.OCShare;
 import com.owncloud.android.lib.resources.shares.ShareType;
+import com.owncloud.android.lib.resources.users.GetPublicKeyRemoteOperation;
 import com.owncloud.android.operations.common.SyncOperation;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.EncryptionUtilsV2;
@@ -129,8 +134,29 @@ public class CreateShareWithShareeOperation extends SyncOperation {
         // E2E: lock folder
         if (isEncrypted) {
             try {
+                String publicKey = EncryptionUtils.getPublicKey(user, shareeName, arbitraryDataProvider);
+
+                if (publicKey.equals("")) {
+                    NextcloudClient nextcloudClient = new ClientFactoryImpl(context).createNextcloudClient(user);
+                    RemoteOperationResult<String> result = new GetPublicKeyRemoteOperation(shareeName).execute(nextcloudClient);
+                    if (result.isSuccess()) {
+                        // store it
+                        EncryptionUtils.savePublicKey(
+                            user,
+                            result.getResultData(),
+                            shareeName,
+                            arbitraryDataProvider
+                                                     );
+                    } else {
+                        RemoteOperationResult e = new RemoteOperationResult(new IllegalStateException());
+                        e.setMessage(context.getString(R.string.secure_share_not_set_up));
+
+                        return e;
+                    }
+                }
+
                 token = EncryptionUtils.lockFolder(folder, client, newCounter);
-            } catch (UploadException e) {
+            } catch (UploadException | ClientFactory.CreationException e) {
                 return new RemoteOperationResult(e);
             }
         }

@@ -572,33 +572,20 @@ class FileDetailsSharingProcessFragment :
         if (share != null && share?.note != noteText) {
             fileOperationsHelper?.updateNoteToShare(share, noteText)
         } else {
-            if (isSecureShare) {
-                // SecureShareTask(
-                //     accountManager.getUser(),
-                //     clientFactory,
-                //     shareeName!!,
-                //     arbitraryDataProvider,
-                //     fileOperationsHelper,
-                //     file,
-                //     WeakReference<FileActivity>(this)
-                // )
-                //     .execute()
-            } else {
-                // else create new share
-                fileOperationsHelper?.shareFileWithSharee(
-                    file,
-                    shareeName,
-                    shareType,
-                    permission,
-                    binding
-                        .shareProcessHideDownloadCheckbox.isChecked,
-                    binding.shareProcessEnterPassword.text.toString().trim(),
-                    chosenExpDateInMills,
-                    noteText,
-                    binding.shareProcessChangeName.text.toString().trim(),
-                    true
-                )
-            }
+            // else create new share
+            fileOperationsHelper?.shareFileWithSharee(
+                file,
+                shareeName,
+                shareType,
+                permission,
+                binding
+                    .shareProcessHideDownloadCheckbox.isChecked,
+                binding.shareProcessEnterPassword.text.toString().trim(),
+                chosenExpDateInMills,
+                noteText,
+                binding.shareProcessChangeName.text.toString().trim(),
+                true
+            )
         }
         removeCurrentFragment()
     }
