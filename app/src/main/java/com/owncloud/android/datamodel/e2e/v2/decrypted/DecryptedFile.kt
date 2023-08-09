@@ -21,12 +21,9 @@
  */
 package com.owncloud.android.datamodel.e2e.v2.decrypted
 
-import com.google.gson.annotations.SerializedName
-
 data class DecryptedFile(
     var filename: String,
     val mimetype: String,
-    @SerializedName(value = "nonce", alternate = ["initializationVector"])
     val nonce: String,
     val authenticationTag: String,
     val key: String

@@ -51,6 +51,7 @@ import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.LockFileRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.MetadataResponse;
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UnlockFileRemoteOperation;
@@ -406,7 +407,7 @@ public final class EncryptionUtils {
                            User user,
                            @Nullable String existingLockToken
                           ) {
-        RemoteOperationResult<String> getMetadataOperationResult = new GetMetadataRemoteOperation(folder.getLocalId())
+        RemoteOperationResult<MetadataResponse> getMetadataOperationResult = new GetMetadataRemoteOperation(folder.getLocalId())
             .execute(client);
 
         if (!getMetadataOperationResult.isSuccess()) {
@@ -414,7 +415,7 @@ public final class EncryptionUtils {
         }
 
         // decrypt metadata
-        String serializedEncryptedMetadata = getMetadataOperationResult.getResultData();
+        String serializedEncryptedMetadata = getMetadataOperationResult.getResultData().getMetadata();
 
         E2EVersion version = determinateVersion(serializedEncryptedMetadata);
 
@@ -444,7 +445,7 @@ public final class EncryptionUtils {
                 }
 
             case V2_0:
-                return encryptionUtilsV2.parseAnyMetadata(serializedEncryptedMetadata,
+                return encryptionUtilsV2.parseAnyMetadata(getMetadataOperationResult.getResultData(),
                                                           user,
                                                           client,
                                                           context,
@@ -1316,14 +1317,14 @@ public final class EncryptionUtils {
         long localId = parentFile.getLocalId();
 
         GetMetadataRemoteOperation getMetadataOperation = new GetMetadataRemoteOperation(localId);
-        RemoteOperationResult<String> getMetadataOperationResult = getMetadataOperation.execute(client);
+        RemoteOperationResult<MetadataResponse> getMetadataOperationResult = getMetadataOperation.execute(client);
 
 
         DecryptedFolderMetadataFile metadata;
 
         if (getMetadataOperationResult.isSuccess()) {
             // decrypt metadata
-            String serializedEncryptedMetadata = getMetadataOperationResult.getResultData();
+            String serializedEncryptedMetadata = getMetadataOperationResult.getResultData().getMetadata();
 
 
             EncryptedFolderMetadataFile encryptedFolderMetadata = EncryptionUtils.deserializeJSON(
@@ -1336,7 +1337,9 @@ public final class EncryptionUtils {
                                                                                 privateKey,
                                                                                 parentFile,
                                                                                 storageManager,
-                                                                                client)
+                                                                                client,
+                                                                                parentFile.getE2eCounter(),
+                                                                                getMetadataOperationResult.getResultData().getSignature())
             );
 
         } else if (getMetadataOperationResult.getHttpCode() == HttpStatus.SC_NOT_FOUND) {

@@ -44,6 +44,7 @@ import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.accounts.AccountUtils
 import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.lib.resources.e2ee.GetMetadataRemoteOperation
+import com.owncloud.android.lib.resources.e2ee.MetadataResponse
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation
 import com.owncloud.android.operations.UploadException
@@ -173,11 +174,13 @@ class EncryptionUtilsV2 {
         privateKey: String,
         ocFile: OCFile,
         storageManager: FileDataStorageManager,
-        client: OwnCloudClient
+        client: OwnCloudClient,
+        oldCounter: Long,
+        signature: String
     ): DecryptedFolderMetadataFile {
-        var encryptedUser = metadataFile.users.find { it.userId == userId }
+        val encryptedUser = metadataFile.users.find { it.userId == userId }
 
-        if (encryptedUser == null) {
+        val decryptedFolderMetadataFile = if (encryptedUser == null) {
             // we are in a subfolder, decrypt information is in top most encrypted folder
             val metadataKey = retrieveTopMostMetadataKey(
                 ocFile,
@@ -190,7 +193,7 @@ class EncryptionUtilsV2 {
             val decryptedMetadata = decryptMetadata(metadataFile.metadata, metadataKey)
             decryptedMetadata.metadataKey = metadataKey
 
-            return DecryptedFolderMetadataFile(
+            DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 mutableListOf(),
                 mutableMapOf() // TODO
@@ -205,16 +208,16 @@ class EncryptionUtilsV2 {
                 decryptedMetadataKey
             )
 
-            val decryptedFolderMetadataFile = DecryptedFolderMetadataFile(
+            DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 users,
                 mutableMapOf() // TODO
             )
-
-            verifyMetadata(decryptedFolderMetadataFile, oldCounter, ans)
-
-            return decryptedFolderMetadataFile
         }
+
+        verifyMetadata(metadataFile, decryptedFolderMetadataFile, oldCounter, signature)
+
+        return decryptedFolderMetadataFile
     }
 
     @Throws(IllegalStateException::class)
@@ -241,7 +244,7 @@ class EncryptionUtilsV2 {
 
         if (result.isSuccess) {
             val v2 = EncryptionUtils.deserializeJSON(
-                result.resultData,
+                result.resultData.metadata,
                 object : TypeToken<EncryptedFolderMetadataFile>() {}
             )
 
@@ -251,7 +254,9 @@ class EncryptionUtilsV2 {
                 privateKey,
                 topMost,
                 storageManager,
-                client
+                client,
+                folder.e2eCounter,
+                result.resultData.signature
             ).metadata.metadataKey
         } else {
             throw IllegalStateException("Cannot retrieve metadata")
@@ -427,9 +432,9 @@ class EncryptionUtilsV2 {
 
         return if (getMetadataOperationResult.isSuccess) {
             // decrypt metadata
-            val serializedEncryptedMetadata = getMetadataOperationResult.resultData
+            val metadataResponse = getMetadataOperationResult.resultData
             val metadata = parseAnyMetadata(
-                serializedEncryptedMetadata,
+                metadataResponse,
                 user,
                 client,
                 context,
@@ -464,7 +469,7 @@ class EncryptionUtilsV2 {
 
     @Throws(IllegalStateException::class)
     fun parseAnyMetadata(
-        serializedEncryptedMetadata: String,
+        metadataResponse: MetadataResponse,
         user: User,
         client: OwnCloudClient,
         context: Context,
@@ -475,7 +480,7 @@ class EncryptionUtilsV2 {
         val storageManager = FileDataStorageManager(user, context.contentResolver)
 
         val v2 = EncryptionUtils.deserializeJSON(
-            serializedEncryptedMetadata,
+            metadataResponse.metadata,
             object : TypeToken<EncryptedFolderMetadataFile>() {}
         )
 
@@ -490,12 +495,14 @@ class EncryptionUtilsV2 {
                 privateKey,
                 folder,
                 storageManager,
-                client
+                client,
+                folder.e2eCounter,
+                metadataResponse.signature
             )
         } else {
             // try to deserialize v1
             val v1 = EncryptionUtils.deserializeJSON(
-                serializedEncryptedMetadata,
+                metadataResponse.metadata,
                 object : TypeToken<EncryptedFolderMetadataFileV1?>() {}
             )
 
@@ -677,7 +684,7 @@ class EncryptionUtilsV2 {
         val cert = EncryptionUtils.convertCertFromString(publicKeyString)
         val privateKey = EncryptionUtils.PEMtoPrivateKey(privateKeyString)
 
-        val signature = getMessageSignature(cert, privateKey, metadata)
+        val signature = getMessageSignature(cert, privateKey, encryptedFolderMetadata)
         val uploadMetadataOperationResult = if (metadataExists) {
             // update metadata
             UpdateMetadataV2RemoteOperation(
@@ -709,29 +716,33 @@ class EncryptionUtilsV2 {
     @Throws(IllegalStateException::class)
     @VisibleForTesting
     fun verifyMetadata(
-        metadata: DecryptedFolderMetadataFile,
-        oldCounter: Int,
+        encryptedFolderMetadataFile: EncryptedFolderMetadataFile,
+        decryptedFolderMetadataFile: DecryptedFolderMetadataFile,
+        oldCounter: Long,
         ans: String // base 64 encoded BER
-    ): Boolean {
+    ) {
         // check counter
-        if (metadata.metadata.counter <= oldCounter) {
-            throw java.lang.IllegalStateException("Counter is too old")
+        if (decryptedFolderMetadataFile.metadata.counter < oldCounter) {
+            throw IllegalStateException("Counter is too old")
         }
 
         // check signature
-        val json = EncryptionUtils.serializeJSON(metadata)
-        val certs = metadata.users.map { EncryptionUtils.convertCertFromString(it.certificate) }
-        verifySignedMessage(ans, json, certs)
+        val json = EncryptionUtils.serializeJSON(encryptedFolderMetadataFile, true)
+        val certs = decryptedFolderMetadataFile.users.map { EncryptionUtils.convertCertFromString(it.certificate) }
 
-        // check hash of keys
-        val hashedMetadataKey = hashMetadataKey(metadata.metadata.metadataKey)
-        if (!metadata.metadata.keyChecksums.contains(hashedMetadataKey)) {
-            throw IllegalStateException("Hash not found")
+        val base64 = EncryptionUtils.encodeStringToBase64String(json)
+
+        if (!verifySignedMessage(ans, base64, certs)) {
+            throw IllegalStateException("Signature does not match")
         }
 
-        // check certs
+        // TODO check hash of keys
+        // val hashedMetadataKey = hashMetadataKey(metadata.metadata.metadataKey)
+        // if (!metadata.metadata.keyChecksums.contains(hashedMetadataKey)) {
+        //     throw IllegalStateException("Hash not found")
+        // }
 
-        return true
+        // TODO check certs
     }
 
     fun createDecryptedFolderMetadataFile(): DecryptedFolderMetadataFile {
@@ -777,7 +788,7 @@ class EncryptionUtilsV2 {
      * Sign the data with key, embed the certificate associated within the CMSSignedData
      * detached data not possible, as to restore asn.1
      */
-    fun signMessage(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile): CMSSignedData {
+    fun signMessage(cert: X509Certificate, key: PrivateKey, message: EncryptedFolderMetadataFile): CMSSignedData {
         val json = EncryptionUtils.serializeJSON(message, true)
         val base64 = EncryptionUtils.encodeStringToBase64String(json)
         val data = base64.toByteArray()
@@ -797,7 +808,15 @@ class EncryptionUtilsV2 {
         return EncryptionUtils.encodeBytesToBase64String(ans)
     }
 
-    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, message: DecryptedFolderMetadataFile): String {
+    fun getMessageSignature(cert: String, privateKey: String, metadataFile: EncryptedFolderMetadataFile): String {
+        return getMessageSignature(
+            EncryptionUtils.convertCertFromString(cert),
+            EncryptionUtils.PEMtoPrivateKey(privateKey),
+            metadataFile
+        )
+    }
+
+    fun getMessageSignature(cert: X509Certificate, key: PrivateKey, message: EncryptedFolderMetadataFile): String {
         val signedMessage = signMessage(cert, key, message)
         return extractSignedString(signedMessage)
     }

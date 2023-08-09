@@ -239,6 +239,7 @@ public class RefreshFolderOperation extends RemoteOperation {
 
         if (result.isSuccess()) {
             if (mRemoteFolderChanged) {
+                // TODO catch IllegalStateException, show properly to user
                 result = fetchAndSyncRemoteFolder(client);
             } else {
                 mChildren = mStorageManager.getFolderContent(mLocalFolder, false);
