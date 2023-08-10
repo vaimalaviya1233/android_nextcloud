@@ -496,6 +496,11 @@ public class RefreshFolderOperation extends RemoteOperation {
             e2EVersion = E2EVersion.V2_0;
             localFilesMap = prefillLocalFilesMap((DecryptedFolderMetadataFile) object,
                                                  mStorageManager.getFolderContent(mLocalFolder, false));
+
+            // update counter
+            if (object != null) {
+                mLocalFolder.setE2eCounter(((DecryptedFolderMetadataFile) object).getMetadata().getCounter());
+            }
         }
 
         // loop to update every child
@@ -544,6 +549,9 @@ public class RefreshFolderOperation extends RemoteOperation {
                 updateFileNameForEncryptedFile(mStorageManager,
                                                (DecryptedFolderMetadataFile) object,
                                                updatedFile);
+                if (localFile != null) {
+                    updatedFile.setE2eCounter(localFile.getE2eCounter());
+                }
             }
 
             // we parse content, so either the folder itself or its direct parent (which we check) must be encrypted

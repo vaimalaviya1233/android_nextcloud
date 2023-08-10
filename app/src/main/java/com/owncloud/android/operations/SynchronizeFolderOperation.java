@@ -300,11 +300,11 @@ public class SynchronizeFolderOperation extends SyncOperation {
         if (object instanceof DecryptedFolderMetadataFileV1) {
             e2EVersion = E2EVersion.V1_2;
             localFilesMap = RefreshFolderOperation.prefillLocalFilesMap((DecryptedFolderMetadataFileV1) object,
-                                                 storageManager.getFolderContent(mLocalFolder, false));
+                                                                        storageManager.getFolderContent(mLocalFolder, false));
         } else {
             e2EVersion = E2EVersion.V2_0;
             localFilesMap = RefreshFolderOperation.prefillLocalFilesMap((DecryptedFolderMetadataFile) object,
-                                                 storageManager.getFolderContent(mLocalFolder, false));
+                                                                        storageManager.getFolderContent(mLocalFolder, false));
         }
         
         // loop to synchronize every child

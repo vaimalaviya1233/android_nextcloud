@@ -333,6 +333,7 @@ class EncryptionUtilsV2 {
     ): DecryptedFolderMetadataFile {
         metadataFile.users.add(DecryptedUser(userId, cert))
         metadataFile.metadata.metadataKey = EncryptionUtils.generateKey()
+        metadataFile.metadata.keyChecksums.add(hashMetadataKey(metadataFile.metadata.metadataKey))
 
         return metadataFile
     }
@@ -349,7 +350,7 @@ class EncryptionUtilsV2 {
         }
 
         metadataFile.metadata.metadataKey = EncryptionUtils.generateKey()
-        // TODO add to keyChecksum array
+        metadataFile.metadata.keyChecksums.add(hashMetadataKey(metadataFile.metadata.metadataKey))
 
         return metadataFile
     }
@@ -360,7 +361,8 @@ class EncryptionUtilsV2 {
         initializationVector: ByteArray,
         authenticationTag: String,
         key: ByteArray,
-        metadataFile: DecryptedFolderMetadataFile
+        metadataFile: DecryptedFolderMetadataFile,
+        fileDataStorageManager: FileDataStorageManager
     ): DecryptedFolderMetadataFile {
         val decryptedFile = DecryptedFile(
             ocFile.decryptedFileName,
@@ -372,6 +374,8 @@ class EncryptionUtilsV2 {
 
         metadataFile.metadata.files[encryptedFileName] = decryptedFile
         metadataFile.metadata.counter++
+        ocFile.setE2eCounter(metadataFile.metadata.counter)
+        fileDataStorageManager.saveFile(ocFile)
 
         // TODO change metadata key always?
 
@@ -736,13 +740,13 @@ class EncryptionUtilsV2 {
             throw IllegalStateException("Signature does not match")
         }
 
-        // TODO check hash of keys
-        // val hashedMetadataKey = hashMetadataKey(metadata.metadata.metadataKey)
-        // if (!metadata.metadata.keyChecksums.contains(hashedMetadataKey)) {
-        //     throw IllegalStateException("Hash not found")
-        // }
+        val hashedMetadataKey = hashMetadataKey(decryptedFolderMetadataFile.metadata.metadataKey)
+        if (!decryptedFolderMetadataFile.metadata.keyChecksums.contains(hashedMetadataKey)) {
+            throw IllegalStateException("Hash not found")
+            // TODO E2E: fake this to present problem to user
+        }
 
-        // TODO check certs
+        // TODO E2E: check certs
     }
 
     fun createDecryptedFolderMetadataFile(): DecryptedFolderMetadataFile {

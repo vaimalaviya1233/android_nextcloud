@@ -189,7 +189,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                     if (unlockFolderResult.isSuccess()) {
                         token = null;
                     } else {
-                        // TODO do better
+                        // TODO E2E: do better
                         throw new RuntimeException("Could not unlock folder!");
                     }
                 }
@@ -236,7 +236,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                 }
             }
 
-            // TODO do better
+            // TODO E2E: do better
             return new RemoteOperationResult(e);
         } finally {
             // unlock folder
@@ -244,7 +244,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                 RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolder(parent, client, token);
 
                 if (!unlockFolderResult.isSuccess()) {
-                    // TODO do better
+                    // TODO E2E: do better
                     throw new RuntimeException("Could not unlock folder!");
                 }
             }
@@ -312,7 +312,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                     if (unlockFolderResult.isSuccess()) {
                         token = null;
                     } else {
-                        // TODO do better
+                        // TODO E2E: do better
                         throw new RuntimeException("Could not unlock folder!");
                     }
                 }
@@ -358,7 +358,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                 }
             }
 
-            // TODO do better
+            // TODO E2E: do better
             return new RemoteOperationResult(e);
         } finally {
             // unlock folder
@@ -366,7 +366,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                 RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolder(parent, client, token);
 
                 if (!unlockFolderResult.isSuccess()) {
-                    // TODO do better
+                    // TODO E2E: do better
                     throw new RuntimeException("Could not unlock folder!");
                 }
             }

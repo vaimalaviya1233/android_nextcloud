@@ -272,6 +272,7 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         for (OCFile file : mFiles) {
             if (file.getRemoteId().equals(fileId)) {
                 file.setEncrypted(encrypted);
+                file.setE2eCounter(0L);
                 mStorageManager.saveFile(file);
 
                 break;
@@ -281,6 +282,7 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         for (OCFile file : mFilesAll) {
             if (file.getRemoteId().equals(fileId)) {
                 file.setEncrypted(encrypted);
+                file.setE2eCounter(0L);
             }
         }
 

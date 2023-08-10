@@ -1297,7 +1297,7 @@ public final class EncryptionUtils {
 
             return new Pair<>(Boolean.FALSE, metadata);
         } else {
-            // TODO error
+            // TODO E2E: error
             throw new UploadException("something wrong");
         }
     }
@@ -1350,12 +1350,17 @@ public final class EncryptionUtils {
                                                        E2EVersion.V2_0.getValue());
             metadata.getUsers().add(new DecryptedUser(client.getUserId(), publicKey));
             byte[] metadataKey = EncryptionUtils.generateKey();
-            // String encryptedMetadataKey = EncryptionUtils.encryptStringAsymmetric(metadataKey, publicKey);
+
+            if (metadataKey == null) {
+                throw new UploadException("Could not encrypt folder!");
+            }
+
             metadata.getMetadata().setMetadataKey(metadataKey);
+            metadata.getMetadata().getKeyChecksums().add(new EncryptionUtilsV2().hashMetadataKey(metadataKey));
 
             return new Pair<>(Boolean.FALSE, metadata);
         } else {
-            // TODO error
+            // TODO E2E: error
             throw new UploadException("something wrong");
         }
     }

@@ -169,6 +169,11 @@ public class OCFileListBottomSheetDialog extends BottomSheetDialog implements In
             binding.menuCreateRichWorkspaceDivider.setVisibility(View.GONE);
         }
 
+        // E2E v2 does not allow to have subfolder
+        if (file != null && file.isEncrypted() && file.getE2eCounter() > -1) {
+            binding.menuMkdir.setVisibility(View.GONE);
+        }
+
         setupClickListener();
     }
 

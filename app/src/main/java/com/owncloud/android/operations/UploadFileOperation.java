@@ -473,7 +473,7 @@ public class UploadFileOperation extends SyncOperation {
 
             metadataExists = metadataPair.getFirst();
             DecryptedFolderMetadataFile metadata = metadataPair.getSecond();
-            // TODO check counter: must be less than our counter, check rest: signature, etc
+            // TODO E2E: check counter: must be less than our counter, check rest: signature, etc
             /**** E2E *****/
 
             // check name collision
@@ -619,9 +619,10 @@ public class UploadFileOperation extends SyncOperation {
                     iv,
                     encryptedFile.getAuthenticationTag(),
                     key,
-                    metadata);
-                
-                // TODO to check
+                    metadata,
+                    getStorageManager());
+
+                // TODO E2E: to check
 //                metadata.getFiles().put(encryptedFileName, decryptedFile);
 //
 //                EncryptedFolderMetadata encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(metadata,

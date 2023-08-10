@@ -53,12 +53,9 @@ t9ONcUqCKP7hd8rajtxM4JIIRExwD8OkgARWGg==
 
     @Throws(java.lang.Exception::class)
     fun generateFolderMetadataV2(userId: String, cert: String): DecryptedFolderMetadataFile {
-        var metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey())
-        val encryptedMetadataKey: String =
-            EncryptionUtils.encryptStringAsymmetric(metadataKey, cert)
-
         val metadata = DecryptedMetadata().apply {
-            metadataKey = encryptedMetadataKey
+            metadataKey = EncryptionUtils.generateKey()
+            keyChecksums.add(EncryptionUtilsV2().hashMetadataKey(metadataKey))
         }
 
         val file1 = DecryptedFile(

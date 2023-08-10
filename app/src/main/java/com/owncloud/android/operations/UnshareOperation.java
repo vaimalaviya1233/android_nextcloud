@@ -82,7 +82,7 @@ public class UnshareOperation extends SyncOperation {
             if (file.isEncrypted()) {
                 // E2E: lock folder
                 try {
-                    token = EncryptionUtils.lockFolder(file, client);
+                    token = EncryptionUtils.lockFolder(file, client, file.getE2eCounter() + 1);
                 } catch (UploadException e) {
                     return new RemoteOperationResult(e);
                 }

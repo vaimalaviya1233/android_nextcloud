@@ -338,7 +338,6 @@ public class FileDataStorageManager {
         for (OCFile ocFile : updatedFiles) {
             ContentValues contentValues = createContentValuesForFile(ocFile);
             contentValues.put(ProviderTableMeta.FILE_PARENT, folder.getFileId());
-            contentValues.put(ProviderTableMeta.FILE_E2E_COUNTER, folder.getE2eCounter());
 
             if (fileExists(ocFile.getFileId()) || fileExists(ocFile.getRemotePath())) {
                 long fileId;
@@ -511,6 +510,7 @@ public class FileDataStorageManager {
         cv.put(ProviderTableMeta.FILE_MODIFIED, file.getModificationTimestamp());
         cv.put(ProviderTableMeta.FILE_METADATA_SIZE, gson.toJson(file.getImageDimension()));
         cv.put(ProviderTableMeta.FILE_METADATA_GPS, gson.toJson(file.getGeoLocation()));
+        cv.put(ProviderTableMeta.FILE_E2E_COUNTER, file.getE2eCounter());
 
         return cv;
     }
