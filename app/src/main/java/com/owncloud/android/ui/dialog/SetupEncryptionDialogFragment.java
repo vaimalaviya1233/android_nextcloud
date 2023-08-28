@@ -194,7 +194,7 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
 
                         try {
                             String privateKey = task.get();
-                            String mnemonicUnchanged = binding.encryptionPasswordInput.getText().toString();
+                            String mnemonicUnchanged = binding.encryptionPasswordInput.getText().toString().trim();
                             String mnemonic = binding.encryptionPasswordInput.getText().toString().replaceAll("\\s", "")
                                 .toLowerCase(Locale.ROOT);
                             String decryptedPrivateKey = EncryptionUtils.decryptPrivateKey(privateKey,

@@ -58,6 +58,7 @@ import com.owncloud.android.lib.resources.shares.OCShare;
 import com.owncloud.android.lib.resources.shares.ShareType;
 import com.owncloud.android.lib.resources.shares.ShareeUser;
 import com.owncloud.android.lib.resources.status.CapabilityBooleanType;
+import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.operations.RemoteOperationFailedException;
 import com.owncloud.android.utils.FileStorageUtils;
@@ -1922,6 +1923,8 @@ public class FileDataStorageManager {
                           capability.getEndToEndEncryption().getValue());
         contentValues.put(ProviderTableMeta.CAPABILITIES_END_TO_END_ENCRYPTION_KEYS_EXIST,
                           capability.getEndToEndEncryptionKeysExist().getValue());
+        contentValues.put(ProviderTableMeta.CAPABILITIES_END_TO_END_ENCRYPTION_API_VERSION,
+                          capability.getEndToEndEncryptionApiVersion().getValue());
         contentValues.put(ProviderTableMeta.CAPABILITIES_SERVER_BACKGROUND_DEFAULT,
                           capability.getServerBackgroundDefault().getValue());
         contentValues.put(ProviderTableMeta.CAPABILITIES_SERVER_BACKGROUND_PLAIN,
@@ -2073,6 +2076,11 @@ public class FileDataStorageManager {
                 getBoolean(cursor,
                            ProviderTableMeta.CAPABILITIES_END_TO_END_ENCRYPTION_KEYS_EXIST)
                                                      );
+            capability.setEndToEndEncryptionApiVersion(
+                E2EVersion.fromValue(
+                    getString(cursor, ProviderTableMeta.CAPABILITIES_END_TO_END_ENCRYPTION_API_VERSION)
+                                    )
+                                                      );
             capability.setServerBackgroundDefault(
                 getBoolean(cursor, ProviderTableMeta.CAPABILITIES_SERVER_BACKGROUND_DEFAULT));
             capability.setServerBackgroundPlain(getBoolean(cursor,

@@ -343,7 +343,7 @@ public final class EncryptionUtils {
         }
 
         // verify checksum
-        String mnemonic = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.MNEMONIC);
+        String mnemonic = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.MNEMONIC).trim();
         String checksum = EncryptionUtils.generateChecksum(decryptedFolderMetadata, mnemonic);
         String decryptedFolderChecksum = decryptedFolderMetadata.getMetadata().getChecksum();
 

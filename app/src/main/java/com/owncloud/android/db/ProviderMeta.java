@@ -246,6 +246,7 @@ public class ProviderMeta {
         public static final String CAPABILITIES_SERVER_BACKGROUND_PLAIN = "background_plain";
         public static final String CAPABILITIES_END_TO_END_ENCRYPTION = "end_to_end_encryption";
         public static final String CAPABILITIES_END_TO_END_ENCRYPTION_KEYS_EXIST = "end_to_end_encryption_keys_exist";
+        public static final String CAPABILITIES_END_TO_END_ENCRYPTION_API_VERSION = "end_to_end_encryption_api_version";
         public static final String CAPABILITIES_ACTIVITY = "activity";
         public static final String CAPABILITIES_RICHDOCUMENT = "richdocument";
         public static final String CAPABILITIES_RICHDOCUMENT_MIMETYPE_LIST = "richdocument_mimetype_list";
