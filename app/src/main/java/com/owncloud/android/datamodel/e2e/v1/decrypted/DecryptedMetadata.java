@@ -60,7 +60,7 @@ public class DecryptedMetadata {
         this.metadataKey = metadataKey;
     }
 
-    public void setVersion(int version) {
+    public void setVersion(double version) {
         this.version = version;
     }
 

@@ -24,7 +24,11 @@ package com.owncloud.android.utils
 
 import com.owncloud.android.AbstractOnServerIT
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata
+import com.owncloud.android.lib.resources.status.E2EVersion
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptionUtilsV2ServerIT : AbstractOnServerIT() {
@@ -97,5 +101,137 @@ class EncryptionUtilsV2ServerIT : AbstractOnServerIT() {
 
         compare.second.metadata.counter = compare.second.metadata.counter + 1
         assertEquals(compare.second, compare2.second)
+    }
+
+    @Test
+    fun v1StaysV1() {
+        val encryptionTestUtils = EncryptionTestUtils()
+        val encryptionUtilsV2 = EncryptionUtilsV2()
+        val arbitraryDataProvider = ArbitraryDataProviderImpl(targetContext)
+
+        // save keys
+        arbitraryDataProvider.storeOrUpdateKeyValue(
+            user.accountName,
+            EncryptionUtils.PUBLIC_KEY,
+            encryptionTestUtils.t1PublicKey
+        )
+        arbitraryDataProvider.storeOrUpdateKeyValue(
+            user.accountName,
+            EncryptionUtils.PRIVATE_KEY,
+            encryptionTestUtils.t1PrivateKey
+        )
+
+        val folder = createFolder("/Android2/$randomName")
+
+        // create v1
+        val metadata = DecryptedMetadata().apply {
+            version = 1.2
+        }
+
+        val file1 = com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile().apply {
+            initializationVector = "gKm3n+mJzeY26q4OfuZEqg=="
+            authenticationTag = "PboI9tqHHX3QeAA22PIu4w=="
+        }
+
+        val metadataFile = DecryptedFolderMetadataFileV1(
+            metadata,
+            mapOf(Pair("ia7OEEEyXMoRa1QWQk8r", file1))
+        )
+
+        // lock folder
+        var token = EncryptionUtils.lockFolder(folder, client)
+
+        // store it
+        var encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(
+            metadataFile,
+            encryptionTestUtils.t1PublicKey,
+            folder.localId,
+            user,
+            arbitraryDataProvider
+        )
+        var serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true)
+        EncryptionUtils.uploadMetadata(
+            folder,
+            serializedFolderMetadata,
+            token,
+            client,
+            false,
+            E2EVersion.V1_2,
+            ""
+        )
+
+        // unlock it
+        EncryptionUtils.unlockFolder(folder, client, token)
+
+        // check that it is still v1
+        var result = EncryptionUtils.downloadFolderMetadata(
+            folder,
+            client,
+            targetContext,
+            user,
+            null
+        )
+
+        assertTrue(result is DecryptedFolderMetadataFileV1)
+
+        val downloadedMetadata = result as DecryptedFolderMetadataFileV1
+        assertEquals(E2EVersion.V1_2.value, downloadedMetadata.metadata.version.toString())
+        assertEquals(metadataFile.files.size, downloadedMetadata.files.size)
+
+        // update
+        val file2 = com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile().apply {
+            initializationVector = "gKm3n+mJzeY26q4OfuZEqg=="
+            authenticationTag = "PboI9tqHHX3QeAA22PIu4w=="
+        }
+        downloadedMetadata.files["ab7OEEEyXMoRa1QWQk12"] = file2
+
+        // lock folder
+        token = EncryptionUtils.lockFolder(folder, client)
+
+        // store it
+        encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(
+            downloadedMetadata,
+            encryptionTestUtils.t1PublicKey,
+            folder.localId,
+            user,
+            arbitraryDataProvider
+        )
+        serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true)
+        EncryptionUtils.uploadMetadata(
+            folder,
+            serializedFolderMetadata,
+            token,
+            client,
+            true,
+            E2EVersion.V1_2,
+            ""
+        )
+
+        // unlock it
+        EncryptionUtils.unlockFolder(folder, client, token)
+
+        // check that it is still v1
+        result = EncryptionUtils.downloadFolderMetadata(
+            folder,
+            client,
+            targetContext,
+            user,
+            null
+        )
+
+        assertTrue(result is DecryptedFolderMetadataFileV1)
+
+        val downloadedMetadata2 = result as DecryptedFolderMetadataFileV1
+        assertEquals(E2EVersion.V1_2.value, downloadedMetadata2.metadata.version.toString())
+        assertEquals(downloadedMetadata.files.size, downloadedMetadata2.files.size)
+        assertTrue(metadataFile.files.size + 1 == downloadedMetadata2.files.size)
+    }
+
+    fun testFileDropV1() {
+        throw NotImplementedError()
+    }
+
+    fun testFileDropV2() {
+        throw NotImplementedError()
     }
 }
