@@ -64,7 +64,6 @@ class EncryptionUtilsV2ServerIT : AbstractOnServerIT() {
             metadataFile,
             token,
             client,
-            storageManager,
             false,
             targetContext,
             user
@@ -87,7 +86,6 @@ class EncryptionUtilsV2ServerIT : AbstractOnServerIT() {
             metadataFile,
             token,
             client,
-            storageManager,
             true,
             targetContext,
             user

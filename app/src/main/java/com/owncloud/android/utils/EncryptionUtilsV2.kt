@@ -70,6 +70,7 @@ import java.security.cert.X509Certificate
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
+@Suppress("TooManyFunctions")
 class EncryptionUtilsV2 {
     @VisibleForTesting
     fun encryptMetadata(metadata: DecryptedMetadata, metadataKey: ByteArray): EncryptedMetadata {
@@ -101,11 +102,7 @@ class EncryptionUtilsV2 {
 
     fun encryptFolderMetadataFile(
         metadataFile: DecryptedFolderMetadataFile,
-        ocFile: OCFile,
-        storageManager: FileDataStorageManager,
-        client: OwnCloudClient,
         userId: String,
-        privateKey: String,
         certificate: String
     ): EncryptedFolderMetadataFile {
         val encryptedUsers: List<EncryptedUser>
@@ -168,6 +165,7 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(IllegalStateException::class)
+    @Suppress("LongParameterList")
     fun decryptFolderMetadataFile(
         metadataFile: EncryptedFolderMetadataFile,
         userId: String,
@@ -221,6 +219,7 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(IllegalStateException::class)
+    @Suppress("ThrowsCount")
     fun retrieveTopMostMetadataKey(
         folder: OCFile,
         storageManager: FileDataStorageManager,
@@ -355,6 +354,7 @@ class EncryptionUtilsV2 {
         return metadataFile
     }
 
+    @Suppress("LongParameterList")
     fun addFileToMetadata(
         encryptedFileName: String,
         ocFile: OCFile,
@@ -472,6 +472,7 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(IllegalStateException::class)
+    @Suppress("TooGenericExceptionCaught")
     fun parseAnyMetadata(
         metadataResponse: MetadataResponse,
         user: User,
@@ -565,8 +566,8 @@ class EncryptionUtilsV2 {
 //                }
 //
 //                // upload metadata
-//                EncryptedFolderMetadataFile encryptedFolderMetadataNew = encryptFolderMetadata(decryptedFolderMetadata,
-//                                                                                               privateKey);
+//                EncryptedFolderMetadataFile encryptedFolderMetadataNew =
+//                encryptFolderMetadata(decryptedFolderMetadata, privateKey);
 //
 //                String serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadataNew);
 //
@@ -607,7 +608,8 @@ class EncryptionUtilsV2 {
 //                        user,
 //                        folder.getLocalId());
 //
-//                    boolean transferredFiledrop = filesDropCountBefore > 0 && decryptedFolderMetadata.getFiles().size() ==
+//                    boolean transferredFiledrop = filesDropCountBefore > 0 &&
+//                    decryptedFolderMetadata.getFiles().size() ==
 //                        encryptedFolderMetadata.getFiles().size() + filesDropCountBefore;
 //
 //                    if (transferredFiledrop) {
@@ -615,11 +617,12 @@ class EncryptionUtilsV2 {
 //                        String token = EncryptionUtils.lockFolder(folder, client);
 //
 //                        // upload metadata
-//                        EncryptedFolderMetadata encryptedFolderMetadataNew = encryptFolderMetadata(decryptedFolderMetadata,
-//                                                                                                   publicKey,
-//                                                                                                   arbitraryDataProvider,
-//                                                                                                   user,
-//                                                                                                   folder.getLocalId());
+//                        EncryptedFolderMetadata encryptedFolderMetadataNew =
+//                        encryptFolderMetadata(decryptedFolderMetadata,
+//                                              publicKey,
+//                                              arbitraryDataProvider,
+//                                              user,
+//                                              folder.getLocalId());
 //
     }
 
@@ -661,12 +664,12 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(UploadException::class)
+    @Suppress("LongParameterList")
     fun serializeAndUploadMetadata(
         parentFile: OCFile,
         metadata: DecryptedFolderMetadataFile,
         token: String,
         client: OwnCloudClient,
-        storageManager: FileDataStorageManager,
         metadataExists: Boolean,
         context: Context,
         user: User
@@ -677,11 +680,7 @@ class EncryptionUtilsV2 {
 
         val encryptedFolderMetadata = encryptFolderMetadataFile(
             metadata,
-            parentFile,
-            storageManager,
-            client,
             client.userId,
-            privateKeyString,
             publicKeyString
         )
         val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true)
@@ -718,6 +717,7 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(IllegalStateException::class)
+    @Suppress("ThrowsCount")
     @VisibleForTesting
     fun verifyMetadata(
         encryptedFolderMetadataFile: EncryptedFolderMetadataFile,
@@ -760,6 +760,7 @@ class EncryptionUtilsV2 {
     /**
      * SHA-256 hash of metadata-key
      */
+    @Suppress("MagicNumber")
     fun hashMetadataKey(metadataKey: ByteArray): String {
         val bytes = MessageDigest
             .getInstance("SHA-256")

@@ -1768,7 +1768,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                                                        metadata,
                                                                        token,
                                                                        client,
-                                                                       storageManager,
                                                                        metadataExists,
                                                                        requireContext(),
                                                                        user);

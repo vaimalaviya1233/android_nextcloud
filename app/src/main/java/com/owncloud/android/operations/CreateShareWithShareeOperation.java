@@ -218,7 +218,6 @@ public class CreateShareWithShareeOperation extends SyncOperation {
                                                              newMetadata,
                                                              token,
                                                              client,
-                                                             getStorageManager(),
                                                              metadataExists,
                                                              context,
                                                              user);

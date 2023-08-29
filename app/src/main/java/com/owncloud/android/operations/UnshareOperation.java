@@ -115,7 +115,6 @@ public class UnshareOperation extends SyncOperation {
                                                                  newMetadata,
                                                                  token,
                                                                  client,
-                                                                 getStorageManager(),
                                                                  true,
                                                                  context,
                                                                  user);

@@ -38,7 +38,6 @@ import com.owncloud.android.util.EncryptionTestIT
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class EncryptionUtilsV2IT : AbstractIT() {
@@ -244,18 +243,6 @@ class EncryptionUtilsV2IT : AbstractIT() {
     }
 
     @Test
-    fun testUserT1() {
-        val base64encoded =
-            """Mq33DAHJY0Uc6AhaHFUp1abiWiwVvRDa8h0ckU1qqM4Digb9FKlqcXP2zR+0NbfCAxGLNOUxBVeJJ9qlJg32OGNsNg1wqtZlnLS2NkopSlwajgELRcc94PhS+7rWiNBkNIkD7OGaHvtNRXcG60UekpMK9/TjcBBK3eEgSbJGIaZkDXF9q15i7qocrGeogHKH7Uzd/GJJw/Q2Wid5y4ssfNe66FCdXsvczACcFqb7SSawhihby9b47HVqnwKEcKLeUAJPY4f1n/amvqFhDQsR9PjttLcVIPBjLY8LGgtEH3nBwEc3mCkPtA2Vxrnr4r7+smL0DEeVFXL5pCXBVx44Ng=="""
-
-        val decoded = EncryptionUtils.decodeStringToBase64Bytes(base64encoded)
-
-        val decrypted = EncryptionUtils.decryptStringAsymmetric(base64encoded, encryptionTestUtils.t1PrivateKey)
-
-        assertNotNull(decrypted)
-    }
-
-    @Test
     fun testEncryptDecryptMetadataFile() {
         val enc1 = MockUser("enc1", "Nextcloud")
         val folder = OCFile("/enc")
@@ -263,11 +250,7 @@ class EncryptionUtilsV2IT : AbstractIT() {
 
         val encrypted = encryptionUtilsV2.encryptFolderMetadataFile(
             metadataFile,
-            folder,
-            storageManager,
-            client,
             enc1.accountName,
-            enc1PrivateKey,
             enc1Cert
         )
 
@@ -390,10 +373,8 @@ class EncryptionUtilsV2IT : AbstractIT() {
         val enc1 = MockUser("enc1", "Nextcloud")
         val metadataFile = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         val encrypted = encryptionUtilsV2.encryptFolderMetadataFile(
-            metadataFile, oCFile, storageManager,
-            client,
+            metadataFile,
             enc1UserId,
-            enc1PrivateKey,
             enc1Cert
         )
 
@@ -402,49 +383,6 @@ class EncryptionUtilsV2IT : AbstractIT() {
         encryptionUtilsV2.verifyMetadata(encrypted, metadataFile, 0, signature)
 
         assertTrue(true) // if we reach this, test is successful
-    }
-
-    @Test
-    fun verifyMetadataJohn() {
-        val johnCert = """-----BEGIN CERTIFICATE-----
-MIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJERTEb
-MBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx
-EjAQBgNVBAoMCU5leHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0
-NTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRFMRswGQYDVQQIDBJCYWRl
-bi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4
-dGNsb3VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
-CgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E1AVnt98rvp3DmEfBHNzNB+DS9IBDkS
-SXM/YtfAci6Tcw8ujVBjrZX/WEmrf8ynQHxYmSaJSnP8uAT306/MceZpdpruEc9/
-S10a7vp54Zbld4NYdmfS71oVFVKgM7c/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT
-njz2Za/R68uXpxfz7J9uEXYiqsAs/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp
-UthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1abQRxcu2CYnVo
-6Y0mTxhKhQS/n5gjv3ExiQF3wp/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB
-tv70fTGkXWGAueDp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw
-DwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAyVtq9XAvW7nxSW/8
-hp30z6xbzGiuviXhy/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi
-6dg/7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB
-Mz2zsSrOGPj1YsYOl/U8FU6KA7Yj7U3q7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid
-vigCCLByiccmS/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK/y3d8B8mh
-UtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P
-nDO4ew==
------END CERTIFICATE-----"""
-        val metadata =
-            """{"metadata":{"authenticationTag":"F8r4KqKuX2xwVrNhrDfoBA==","ciphertext":"HN93D/fiwincv/4an4oUI2gq6J7kw42L3oxGLPXckeZpuM8EI1B2Ucb0vDokKOCmW5BCvZXINMYylTRTL+gAWXOhta6yHOBfp5ebe+S7duJ1NA/6qDX5okmfUnRtW6fn2FNetL25eNPOEHxCXGdqJrmbJJLID6hlblvTXVcXyvgqoq5fbHBWs2GsN+gE","nonce":"mbJysCiC2LfyGowAJdDOAw=="},"users":[{"certificate":"-----BEGIN CERTIFICATE-----\nMIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJERTEb\nMBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx\nEjAQBgNVBAoMCU5leHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0\nNTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRFMRswGQYDVQQIDBJCYWRl\nbi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4\ndGNsb3VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\nCgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E1AVnt98rvp3DmEfBHNzNB+DS9IBDkS\nSXM/YtfAci6Tcw8ujVBjrZX/WEmrf8ynQHxYmSaJSnP8uAT306/MceZpdpruEc9/\nS10a7vp54Zbld4NYdmfS71oVFVKgM7c/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT\nnjz2Za/R68uXpxfz7J9uEXYiqsAs/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp\nUthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1abQRxcu2CYnVo\n6Y0mTxhKhQS/n5gjv3ExiQF3wp/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB\ntv70fTGkXWGAueDp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw\nDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAyVtq9XAvW7nxSW/8\nhp30z6xbzGiuviXhy/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi\n6dg/7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB\nMz2zsSrOGPj1YsYOl/U8FU6KA7Yj7U3q7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid\nvigCCLByiccmS/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK/y3d8B8mh\nUtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P\nnDO4ew==\n-----END CERTIFICATE-----\n","encryptedMetadataKey":"A3lvWSgIC4MI/ijEVpzaAOlzvqQf1Hnu78PYUCnzpHBhZqpYR6GgA4Wd+hBoZF/gamGoeGX+4wcEPdAGTgKbUVmD1vebXNlaLGDtcO5VmPLlvCx0X71Tg5gg9oEGKbtuDFOpxdA8aqOT5u+cX4xL8rKcKA/CVrA34XGPcG1H+9Q62k2eiXnMhsxpovoI/t2S0lORh239/r1j7RvINornpB3lFdUJ/UAyUHbOjQceBfVxoYSePiPNWdvX6aibFnviTZxwnq35Lduauy/5noSaTkYAeZWvNK2a+FtZOy9m7niVXgzZPNRvEdHH/ZiWR79o01WFw2tKeVxC8cwDtReQfw==","userId":"john"}],"version":"2.0"}"""
-        val metadataBase64Server =
-            "eyJtZXRhZGF0YSI6eyJhdXRoZW50aWNhdGlvblRhZyI6IkY4cjRLcUt1WDJ4d1ZyTmhyRGZvQkE9PSIsImNpcGhlcnRleHQiOiJITjkzRC9maXdpbmN2LzRhbjRvVUkyZ3E2SjdrdzQyTDNveEdMUFhja2VacHVNOEVJMUIyVWNiMHZEb2tLT0NtVzVCQ3ZaWElOTVl5bFRSVEwrZ0FXWE9odGE2eUhPQmZwNWViZStTN2R1SjFOQS82cURYNW9rbWZVblJ0VzZmbjJGTmV0TDI1ZU5QT0VIeENYR2RxSnJtYkpKTElENmhsYmx2VFhWY1h5dmdxb3E1ZmJIQldzMkdzTitnRSIsIm5vbmNlIjoibWJKeXNDaUMyTGZ5R293QUpkRE9Bdz09In0sInVzZXJzIjpbeyJjZXJ0aWZpY2F0ZSI6Ii0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLVxuTUlJRGtEQ0NBbmlnQXdJQkFnSUJBREFOQmdrcWhraUc5dzBCQVFVRkFEQmhNUXN3Q1FZRFZRUUdFd0pFUlRFYlxuTUJrR0ExVUVDQXdTUW1Ga1pXNHRWM1ZsY25SMFpXMWlaWEpuTVJJd0VBWURWUVFIREFsVGRIVjBkR2RoY25ReFxuRWpBUUJnTlZCQW9NQ1U1bGVIUmpiRzkxWkRFTk1Bc0dBMVVFQXd3RWFtOW9iakFlRncweU16QTNNVFF3TnpNMFxuTlRaYUZ3MDBNekEzTURrd056TTBOVFphTUdFeEN6QUpCZ05WQkFZVEFrUkZNUnN3R1FZRFZRUUlEQkpDWVdSbFxuYmkxWGRXVnlkSFJsYldKbGNtY3hFakFRQmdOVkJBY01DVk4wZFhSMFoyRnlkREVTTUJBR0ExVUVDZ3dKVG1WNFxuZEdOc2IzVmtNUTB3Q3dZRFZRUUREQVJxYjJodU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQlxuQ2dLQ0FRRUE3ajNFcjVZYWhKVDBMQW5TUkxocHFiUm8rRTFBVm50OThydnAzRG1FZkJITnpOQitEUzlJQkRrU1xuU1hNL1l0ZkFjaTZUY3c4dWpWQmpyWlgvV0VtcmY4eW5RSHhZbVNhSlNuUDh1QVQzMDYvTWNlWnBkcHJ1RWM5L1xuUzEwYTd2cDU0WmJsZDROWWRtZlM3MW9WRlZLZ003Yy9WdGh4K3JndTQ4ZnV4emJXQXZWWUxGY3g0N2h6MERKVFxubmp6MlphL1I2OHVYcHhmejdKOXVFWFlpcXNBcy9Gb2JEc0xabHVUM1J5eXdWUndLQmVkMUVaeFVlTElKaXl4cFxuVXRoaEdmSWI4YjNWZjlqWm9VVmkzbTVnbWM0c3BKUUh2WUFrZlpZSHpkOXJhczhqQnUxYWJRUnhjdTJDWW5Wb1xuNlkwbVR4aEtoUVMvbjVnanYzRXhpUUYzd3AvWFl3SURBUUFCbzFNd1VUQWRCZ05WSFE0RUZnUVVtVGVJTFZ1QlxudHY3MGZUR2tYV0dBdWVEcDVrQXdId1lEVlIwakJCZ3dGb0FVbVRlSUxWdUJ0djcwZlRHa1hXR0F1ZURwNWtBd1xuRHdZRFZSMFRBUUgvQkFVd0F3RUIvekFOQmdrcWhraUc5dzBCQVFVRkFBT0NBUUVBeVZ0cTlYQXZXN254U1cvOFxuaHAzMHo2eGJ6R2l1dmlYaHkvSm85MVZFYThJUnNXQ0NuM09tREZpVmR1VEVvd3g3NnRmOGNsSlAwZ2s3UG96aVxuNmRnLzdGaW4rRnFRR1hmQ2s4YkxBaDlnWEtBaWtRMkdLOHlSTjNzbFJGd1lDMm1tMjNIckxkS1haSFVxSmNwQlxuTXoyenNTck9HUGoxWXNZT2wvVThGVTZLQTdZajdVM3E3a0RNWVRBZ3pVUFpBSCtkMURJU0dXcFpzTWEwUllpZFxudmlnQ0NMQnlpY2NtUy9DbzRTYjFlc0Y1OEgrWXRWNStuRkJSd3g4ODFVMmcyVGdES0YxbFBNSy95M2Q4QjhtaFxuVXRXK2xGeFJwdnlOVURwc01qT0VyT3J0TkZFWWJnb1VKTHRxd0JNbXlHUitubW1oNnhuYTMzMVFXY1JBbXcwUFxubkRPNGV3PT1cbi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS1cbiIsImVuY3J5cHRlZE1ldGFkYXRhS2V5IjoiQTNsdldTZ0lDNE1JL2lqRVZwemFBT2x6dnFRZjFIbnU3OFBZVUNuenBIQmhacXBZUjZHZ0E0V2QraEJvWkYvZ2FtR29lR1grNHdjRVBkQUdUZ0tiVVZtRDF2ZWJYTmxhTEdEdGNPNVZtUExsdkN4MFg3MVRnNWdnOW9FR0tidHVERk9weGRBOGFxT1Q1dStjWDR4TDhyS2NLQS9DVnJBMzRYR1BjRzFIKzlRNjJrMmVpWG5NaHN4cG92b0kvdDJTMGxPUmgyMzkvcjFqN1J2SU5vcm5wQjNsRmRVSi9VQXlVSGJPalFjZUJmVnhvWVNlUGlQTldkdlg2YWliRm52aVRaeHducTM1TGR1YXV5LzVub1NhVGtZQWVaV3ZOSzJhK0Z0Wk95OW03bmlWWGd6WlBOUnZFZEhIL1ppV1I3OW8wMVdGdzJ0S2VWeEM4Y3dEdFJlUWZ3PT0iLCJ1c2VySWQiOiJqb2huIn1dLCJ2ZXJzaW9uIjoiMi4wIn0="
-        val signature =
-            "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"
-
-        val metadata64 = EncryptionUtils.encodeStringToBase64String(metadata)
-        assertEquals(metadataBase64Server, metadata64)
-
-        assertTrue(
-            encryptionUtilsV2.verifySignedMessage(
-                signature,
-                metadata64,
-                listOf(EncryptionUtils.convertCertFromString(johnCert))
-            )
-        )
     }
 
     private fun generateDecryptedFileV1(): com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile {
@@ -512,11 +450,7 @@ nDO4ew==
 
         val encryptedMetadataFile = encryptionUtilsV2.encryptFolderMetadataFile(
             metadataFile,
-            folder,
-            storageManager,
-            client,
             client.userId,
-            enc1PrivateKey,
             enc1Cert
         )
 
@@ -714,36 +648,36 @@ nDO4ew==
 //     }
 
     @Test
-    fun testMarino() {
-        val metadata =
-            """{"filedrop":{},"users":[{"certificate":"-----BEGIN CERTIFICATE-----\nMIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJERTEb\nMBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx\nEjAQBgNVBAoMCU5leHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0\nNTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRFMRswGQYDVQQIDBJCYWRl\nbi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4\ndGNsb3VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\nCgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E1AVnt98rvp3DmEfBHNzNB+DS9IBDkS\nSXM\/YtfAci6Tcw8ujVBjrZX\/WEmrf8ynQHxYmSaJSnP8uAT306\/MceZpdpruEc9\/\nS10a7vp54Zbld4NYdmfS71oVFVKgM7c\/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT\nnjz2Za\/R68uXpxfz7J9uEXYiqsAs\/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp\nUthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1abQRxcu2CYnVo\n6Y0mTxhKhQS\/n5gjv3ExiQF3wp\/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB\ntv70fTGkXWGAueDp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw\nDwYDVR0TAQH\/BAUwAwEB\/zANBgkqhkiG9w0BAQUFAAOCAQEAyVtq9XAvW7nxSW\/8\nhp30z6xbzGiuviXhy\/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi\n6dg\/7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB\nMz2zsSrOGPj1YsYOl\/U8FU6KA7Yj7U3q7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid\nvigCCLByiccmS\/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK\/y3d8B8mh\nUtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P\nnDO4ew==\n-----END CERTIFICATE-----\n","userId":"john","encryptedMetadataKey":"zW63bgTlsxhqzBUHFA4KLG+\/TP6mimg56JMnrOssNY3rDtdRAo19kr8CzFSGPx9M4elpBxp3OtJbarT02E\/+Bz9RqH3zVqSJyvjA2sg\/q32p1O2ausVfORtkpQTMgf+KgmeHqvg5PHF0sVeUn\/udx4i8kK8G+r6OjyhZqXns4C\/sRlZzbo3onVYYGygXWW2S+kFfnC7BWIva3R75gyUIaXOl8EEsgOQi94gIEt13v6tO9O1BhXdIhhFXA6EblKTiLhondpHDzbXLzwGgT9riynJoIOVVd4y6PiHbulEXfG5x0cGLhvdJwOIElPoydgLpQ6bvKmHYazWHuQXU4eECkQ=="}],"metadata":{"nonce":"q7Xt1gBr4qL96VlsqxspCg==","ciphertext":"ks4xnkISO+3Nh+2938cRv2gWSxRFie3Q9juBNgqhaW1Ed5T4BnBi3bRv8\/C2vzhHIisQIDZqctBRJ\/O2r0VNSqUSMvj65gtAmUmfg4B+r1V9Z9ftIHTrLyMFDofCs+2Bn+vaU86TfSIu\/Z3dGmWyLJRC6WKMT6St3bKhL3YZqX70DnjsjC8wqq59IY0ietangg+LAKyxVwtW3E75AMXA2SdLC\/+qWfRuNLvcXGTWy6s6IDvZHI3+pidHglMmRM7q5JiJAdMHOBmFTiqt+UYqPiuFCFBKMRR1HQY3bRAvpsDxemWHKL6QBna6BjrYkBXUDPam93OyA2WTRe0uLB81lAMUokLc0g8wSwTxRa5KrZAeMTO1XPf0zlljVvuf1Jq7PFxZ\/4GNXRPKw9Zt8SlnXW0gA2\/+cjMrcp0KiS5+jDZf+kR9P9BXVsLBjqEgTxTqP6DkJu4qp0ns7ofzr+p2zef0HOBX26gLOJ4aZ1gaq6wi|q7Xt1gBr4qL96VlsqxspCg==","authenticationTag":"9BzgV9uoCzieGmdYGqusIg=="},"version":"2.0"}"""
-        val base64Metadata = EncryptionUtils.encodeStringToBase64String(metadata)
-
-        val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.johnPrivateKey)
-        val certificateJohn = EncryptionUtils.convertCertFromString(encryptionTestUtils.johnPublicKey)
-        val certificateEnc2 = EncryptionUtils.convertCertFromString(enc2Cert)
-
-        val signed = encryptionUtilsV2.signMessage(
-            certificateJohn,
-            privateKey,
-            metadata
-        )
-
-        val base64Ans = encryptionUtilsV2.extractSignedString(signed)
-
-        // verify
-        val certs = listOf(
-            certificateEnc2,
-            certificateJohn
-        )
-        assertTrue(encryptionUtilsV2.verifySignedMessage(signed, certs))
-        assertTrue(encryptionUtilsV2.verifySignedMessage(base64Ans, base64Metadata, certs))
-    }
-
-    @Test
     fun testSigning() {
         val metadata =
-            """{"metadata": {"authenticationTag": "zMozev5R09UopLrq7Je1lw==","ciphertext": "j0OBtUrEt4IveGiexjmGK7eKEaWrY70ZkteA5KxHDaZT/t2wwGy9j2FPQGpqXnW6OO3iAYPNgwFikI1smnfNvqdxzVDvhavl/IXa9Kg2niWyqK3D9zpz0YD6mDvl0XsOgTNVyGXNVREdWgzGEERCQoyHI1xowt/swe3KCXw+lf+XPF/t1PfHv0DiDVk70AeWGpPPPu6yggAIxB4Az6PEZhaQWweTC0an48l2FHj2MtB2PiMHtW2v7RMuE8Al3PtE4gOA8CMFrB+Npy6rKcFCXOgTZm5bp7q+J1qkhBDbiBYtvdsYujJ52Xa5SifTpEhGeWWLFnLLgPAQ8o6bXcWOyCoYfLfp4Jpft/Y7H8qzHbPewNSyD6maEv+xljjfU7hxibbszz5A4JjMdQy2BDGoTmJx7Mas+g6l6ZuHLVbdmgQOvD3waJBy6rOg0euux0Cn4bB4bIFEF2KvbhdGbY1Uiq9DYa7kEmSEnlcAYaHyroTkDg4ew7ER0vIBBMzKM3r+UdPVKKS66uyXtZc=","nonce": "W+lxQJeGq7XAJiGfcDohkg=="},"users": [{"certificate": "-----BEGIN CERTIFICATE-----\nMIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJERTEb\nMBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx\nEjAQBgNVBAoMCU5leHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0\nNTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRFMRswGQYDVQQIDBJCYWRl\nbi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4\ndGNsb3VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\nCgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E1AVnt98rvp3DmEfBHNzNB+DS9IBDkS\nSXM/YtfAci6Tcw8ujVBjrZX/WEmrf8ynQHxYmSaJSnP8uAT306/MceZpdpruEc9/\nS10a7vp54Zbld4NYdmfS71oVFVKgM7c/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT\nnjz2Za/R68uXpxfz7J9uEXYiqsAs/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp\nUthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1abQRxcu2CYnVo\n6Y0mTxhKhQS/n5gjv3ExiQF3wp/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB\ntv70fTGkXWGAueDp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw\nDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAyVtq9XAvW7nxSW/8\nhp30z6xbzGiuviXhy/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi\n6dg/7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB\nMz2zsSrOGPj1YsYOl/U8FU6KA7Yj7U3q7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid\nvigCCLByiccmS/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK/y3d8B8mh\nUtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P\nnDO4ew==\n-----END CERTIFICATE-----\n","encryptedMetadataKey": "HVT49bYmwXbGs/dJ2avgU9unrKnPf03MYUI5ZysSR1Bz5pqz64gzH2GBAuUJ+Q4VmHtEfcMaWW7VXgzfCQv5xLBrk+RSgcLOKnlIya8jaDlfttWxbe8jJK+/0+QVPOc6ycA/t5HNCPg09hzj+gnb2L89UHxL5accZD0iEzb5cQbGrc/N6GthjgGrgFKtFf0HhDVplUr+DL9aTyKuKLBPjrjuZbv8M6ZfXO93mOMwSZH3c3rwDUHb/KEaTR/Og4pWQmrqr1VxGLqeV/+GKWhzMYThrOZAUz+5gsbckU2M5V9i+ph0yBI5BjOZVhNuDwW8yP8WtyRJwQc+UBRei/RGBQ==","userId": "john"}],"version": "2"}"""
+            """{"metadata": {"authenticationTag": "zMozev5R09UopLrq7Je1lw==","ciphertext": "j0OBtUrEt4IveGiexjm
+                |GK7eKEaWrY70ZkteA5KxHDaZT/t2wwGy9j2FPQGpqXnW6OO3iAYPNgwFikI1smnfNvqdxzVDvhavl/IXa9Kg2niWyqK3D9
+                |zpz0YD6mDvl0XsOgTNVyGXNVREdWgzGEERCQoyHI1xowt/swe3KCXw+lf+XPF/t1PfHv0DiDVk70AeWGpPPPu6yggAIxB4
+                |Az6PEZhaQWweTC0an48l2FHj2MtB2PiMHtW2v7RMuE8Al3PtE4gOA8CMFrB+Npy6rKcFCXOgTZm5bp7q+J1qkhBDbiBYtv
+                |dsYujJ52Xa5SifTpEhGeWWLFnLLgPAQ8o6bXcWOyCoYfLfp4Jpft/Y7H8qzHbPewNSyD6maEv+xljjfU7hxibbszz5A4Jj
+                |MdQy2BDGoTmJx7Mas+g6l6ZuHLVbdmgQOvD3waJBy6rOg0euux0Cn4bB4bIFEF2KvbhdGbY1Uiq9DYa7kEmSEnlcAYaHyr
+                |oTkDg4ew7ER0vIBBMzKM3r+UdPVKKS66uyXtZc=","nonce": "W+lxQJeGq7XAJiGfcDohkg=="},"users": [{"cert
+                |ificate": "-----BEGIN CERTIFICATE-----\nMIIDkDCCAnigAwIBAgIBADANBgkqhkiG9w0BAQUFADBhMQswCQYDVQ
+                |QGEwJERTEb\nMBkGA1UECAwSQmFkZW4tV3VlcnR0ZW1iZXJnMRIwEAYDVQQHDAlTdHV0dGdhcnQx\nEjAQBgNVBAoMCU5l
+                |eHRjbG91ZDENMAsGA1UEAwwEam9objAeFw0yMzA3MTQwNzM0\nNTZaFw00MzA3MDkwNzM0NTZaMGExCzAJBgNVBAYTAkRF
+                |MRswGQYDVQQIDBJCYWRl\nbi1XdWVydHRlbWJlcmcxEjAQBgNVBAcMCVN0dXR0Z2FydDESMBAGA1UECgwJTmV4\ndGNsb3
+                |VkMQ0wCwYDVQQDDARqb2huMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\nCgKCAQEA7j3Er5YahJT0LAnSRLhpqbRo+E
+                |1AVnt98rvp3DmEfBHNzNB+DS9IBDkS\nSXM/YtfAci6Tcw8ujVBjrZX/WEmrf8ynQHxYmSaJSnP8uAT306/MceZpdpruEc
+                |9/\nS10a7vp54Zbld4NYdmfS71oVFVKgM7c/Vthx+rgu48fuxzbWAvVYLFcx47hz0DJT\nnjz2Za/R68uXpxfz7J9uEXYi
+                |qsAs/FobDsLZluT3RyywVRwKBed1EZxUeLIJiyxp\nUthhGfIb8b3Vf9jZoUVi3m5gmc4spJQHvYAkfZYHzd9ras8jBu1a
+                |bQRxcu2CYnVo\n6Y0mTxhKhQS/n5gjv3ExiQF3wp/XYwIDAQABo1MwUTAdBgNVHQ4EFgQUmTeILVuB\ntv70fTGkXWGAue
+                |Dp5kAwHwYDVR0jBBgwFoAUmTeILVuBtv70fTGkXWGAueDp5kAw\nDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAA
+                |OCAQEAyVtq9XAvW7nxSW/8\nhp30z6xbzGiuviXhy/Jo91VEa8IRsWCCn3OmDFiVduTEowx76tf8clJP0gk7Pozi\n6dg/
+                |7Fin+FqQGXfCk8bLAh9gXKAikQ2GK8yRN3slRFwYC2mm23HrLdKXZHUqJcpB\nMz2zsSrOGPj1YsYOl/U8FU6KA7Yj7U3q
+                |7kDMYTAgzUPZAH+d1DISGWpZsMa0RYid\nvigCCLByiccmS/Co4Sb1esF58H+YtV5+nFBRwx881U2g2TgDKF1lPMK/y3d8
+                |B8mh\nUtW+lFxRpvyNUDpsMjOErOrtNFEYbgoUJLtqwBMmyGR+nmmh6xna331QWcRAmw0P\nnDO4ew==\n-----END CER
+                |TIFICATE-----\n","encryptedMetadataKey": "HVT49bYmwXbGs/dJ2avgU9unrKnPf03MYUI5ZysSR1Bz5pqz64gz
+                |H2GBAuUJ+Q4VmHtEfcMaWW7VXgzfCQv5xLBrk+RSgcLOKnlIya8jaDlfttWxbe8jJK+/0+QVPOc6ycA/t5HNCPg09hzj+g
+                |nb2L89UHxL5accZD0iEzb5cQbGrc/N6GthjgGrgFKtFf0HhDVplUr+DL9aTyKuKLBPjrjuZbv8M6ZfXO93mOMwSZH3c3rw
+                |DUHb/KEaTR/Og4pWQmrqr1VxGLqeV/+GKWhzMYThrOZAUz+5gsbckU2M5V9i+ph0yBI5BjOZVhNuDwW8yP8WtyRJwQc+UB
+                |Rei/RGBQ==","userId": "john"}],"version": "2"}
+            """.trimMargin()
+
         val base64Metadata = EncryptionUtils.encodeStringToBase64String(metadata)
 
         val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
@@ -770,7 +704,7 @@ nDO4ew==
     @Test
     fun sign() {
         val enc1 = MockUser("enc1", "Nextcloud")
-        //val sut = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
+        // val sut = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
         // val json = EncryptionUtils.serializeJSON(sut, true)
 
         val sut = "randomstring123"
@@ -797,30 +731,6 @@ nDO4ew==
         assertTrue(encryptionUtilsV2.verifySignedMessage(base64Ans, jsonBase64, certs))
     }
 
-    @Test
-    fun signWindows() {
-        val enc1 = MockUser("enc1", "Nextcloud")
-        //val sut = generateDecryptedFolderMetadataFile(enc1, enc1Cert)
-        // val json = EncryptionUtils.serializeJSON(sut, true)
-
-        val sut = "windowsrandomstring123"
-        val json = "windowsrandomstring123"
-
-        val privateKey = EncryptionUtils.PEMtoPrivateKey(encryptionTestUtils.t1PrivateKey)
-        val certificate = EncryptionUtils.convertCertFromString(encryptionTestUtils.t1PublicKey)
-
-        val base64Ans =
-            """MIIFSAYJKoZIhvcNAQcCoIIFOTCCBTUCAQExDTALBglghkgBZQMEAgEwCwYJKoZIhvcNAQcBoIIC7DCCAugwggHQoAMCAQICAQAwDQYJKoZIhvcNAQEFBQAwDTELMAkGA1UEAwwCdDEwHhcNMjMwNzI1MDc1NzEyWhcNNDMwNzIwMDc1NzEyWjANMQswCQYDVQQDDAJ0MTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALWnx5gwXAaiLuB5jMTA1t49EsvktGGisB5wUbfOSksHBKL9AeRTi7i5J6ARseA597vd4pU4V18WnDzB3ly+1j7gLNtfxu77KsL60UZwnbn/hVDvwGXgwjRK86bEPC5k2uD1JaCz1HCJqUo6x8ITLPRJLxGy0Y23kpkqfV7zPtX1f945E+Y5DkpwhceUxsBjebh6sFIq+FFl2rL4NudzStl5loqSggwkfU5h9W2j96TXaIgoXZhK09XOhOA2wV6U8PF4D+WW2B/qoNVEP4QvJ0Sdw8gnBy/nYPxmK2gTIQ5+MNlb6u+8TTaDVkPXE+QMunCW0CwUKCUIq8oEBa6G2EUCAwEAAaNTMFEwHQYDVR0OBBYEFBPcwngPf0DALVYC8Q9t1+mXKHYTMB8GA1UdIwQYMBaAFBPcwngPf0DALVYC8Q9t1+mXKHYTMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEFBQADggEBAGXcv2IyZb589xUMMaeqFbTCXHKXcb3hD3y84Gr3q4bXf7z/DgLw8zi4ECR5qw0vdUhudN3lOHGBsrjSsHe+zsk56jIPhlBJiYRnz6UlaxCHYeuY76utU+KKgXXoXr1ZgaueKxosC9Axr9Q5V0JcIiWT+Kp4tipzhBXJ7y94FbUZ0I10PpB75TLIZCusNNtRDFeTX4xts4Ou8Auuay2no+X+krKdku4NlbZhOGl6tW4wLhG6pOE4smRyw3bCbqs8hssjqTFe4vbnFw6GmbfXBkvYU9r0cU60h+t7ykfF3ooPfrLS8LfTjXFKgij+4XfK2o7cTOCSCERMcA/DpIAEVhoxggIiMIICHgIBATASMA0xCzAJBgNVBAMMAnQxAgEAMAsGCWCGSAFlAwQCAaCB5DAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzA3MjgxMjIwMTNaMC8GCSqGSIb3DQEJBDEiBCDKmcDaHONFCK8DWr0lJwfBQdlmVSyyqgzpplVlVIndxzB5BgkqhkiG9w0BCQ8xbDBqMAsGCWCGSAFlAwQBKjALBglghkgBZQMEARYwCwYJYIZIAWUDBAECMAoGCCqGSIb3DQMHMA4GCCqGSIb3DQMCAgIAgDANBggqhkiG9w0DAgIBQDAHBgUrDgMCBzANBggqhkiG9w0DAgIBKDANBgkqhkiG9w0BAQEFAASCAQCcaKwRe3TPumGkPEXrOgk4kJuNLrF7GLI+wGwaM8rwOxlfC6mG/Oz+v66WJok2LdvH64wwl/hdJO1n1PYQxVm0FHMntwGKjyuXMdo+VZEbEE6+T36hHTh1y0tDf4Z/DM0/QyEegqqw59+H9crzNMyw8r8xx6dAjiB3zku7QXBN3bkBfeilRELRN5HHUiMAuqXkYMPWQzNcTNC8VCqGMwlHKu6FcXFrnXiqd9O2AidvUI8vp3b4GKQEfhKxyiUzJYyk68+KQA3MaM6ybrWZ126aAUUQ4MdqYTxqHQnG09D9bFpKS7zIrLC7TIUhnkM1PLygLz46ekIIn2IJlsvZ6ZsH"""
-
-        // verify
-        val certs = listOf(
-            EncryptionUtils.convertCertFromString(enc2Cert),
-            certificate
-        )
-        //assertTrue(encryptionUtilsV2.verifySignedMessage(signed, certs))
-        assertTrue(encryptionUtilsV2.verifySignedMessage(base64Ans, json, certs))
-    }
-
     /**
      * DecryptedFolderMetadata -> EncryptedFolderMetadata -> JSON -> encrypt -> decrypt -> JSON ->
      * EncryptedFolderMetadata -> DecryptedFolderMetadata
@@ -842,11 +752,7 @@ nDO4ew==
         // encrypt
         val encryptedFolderMetadata1 = encryptionUtilsV2.encryptFolderMetadataFile(
             decryptedFolderMetadata1,
-            folder,
-            fileDataStorageManager,
-            client,
             client.userId,
-            EncryptionTestIT.privateKey,
             EncryptionTestIT.publicKey
         )
 

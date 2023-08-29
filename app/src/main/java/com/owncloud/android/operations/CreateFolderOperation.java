@@ -300,7 +300,6 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                                                              updatedMetadataFile,
                                                              token,
                                                              client,
-                                                             getStorageManager(),
                                                              metadataExists,
                                                              context,
                                                              user);
