@@ -377,8 +377,6 @@ class EncryptionUtilsV2 {
         ocFile.setE2eCounter(metadataFile.metadata.counter)
         fileDataStorageManager.saveFile(ocFile)
 
-        // TODO change metadata key always?
-
         return metadataFile
     }
 

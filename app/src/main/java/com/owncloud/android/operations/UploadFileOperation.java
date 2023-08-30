@@ -31,12 +31,17 @@ import com.nextcloud.client.device.BatteryStatus;
 import com.nextcloud.client.device.PowerManagementService;
 import com.nextcloud.client.network.Connectivity;
 import com.nextcloud.client.network.ConnectivityService;
+import com.owncloud.android.datamodel.ArbitraryDataProvider;
+import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.ThumbnailsCacheManager;
 import com.owncloud.android.datamodel.UploadsStorageManager;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFile;
-import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile;
+import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.db.OCUpload;
 import com.owncloud.android.files.services.FileUploader;
@@ -54,6 +59,7 @@ import com.owncloud.android.lib.resources.files.ExistenceCheckRemoteOperation;
 import com.owncloud.android.lib.resources.files.ReadFileRemoteOperation;
 import com.owncloud.android.lib.resources.files.UploadFileRemoteOperation;
 import com.owncloud.android.lib.resources.files.model.RemoteFile;
+import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.operations.common.SyncOperation;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.EncryptionUtilsV2;
@@ -79,7 +85,9 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -442,6 +450,9 @@ public class UploadFileOperation extends SyncOperation {
         boolean metadataExists = false;
         String token = null;
 
+        ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProviderImpl(getContext());
+        String publicKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PUBLIC_KEY);
+
         try {
             // check conditions
             result = checkConditions(originalFile);
@@ -465,19 +476,43 @@ public class UploadFileOperation extends SyncOperation {
 
             // Update metadata
             EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
-            kotlin.Pair<Boolean, DecryptedFolderMetadataFile> metadataPair =
-                encryptionUtilsV2.retrieveMetadata(parentFile,
-                                                   client,
-                                                   user,
-                                                   mContext);
+//            kotlin.Pair<Boolean, DecryptedFolderMetadataFile> metadataPair =
+//                encryptionUtilsV2.retrieveMetadata(parentFile,
+//                                                   client,
+//                                                   user,
+//                                                   mContext);
 
-            metadataExists = metadataPair.getFirst();
-            DecryptedFolderMetadataFile metadata = metadataPair.getSecond();
+            Object object = EncryptionUtils.downloadFolderMetadata(parentFile, client, mContext, user, token);
+
+            if (object == null) {
+                // TODO return error
+                return new RemoteOperationResult(new IllegalStateException("Metadata does not exist"));
+            } else {
+                metadataExists = true;
+            }
+
+            // todo fail if no metadata
+
+//            metadataExists = metadataPair.getFirst();
+//            DecryptedFolderMetadataFile metadata = metadataPair.getSecond();
+
             // TODO E2E: check counter: must be less than our counter, check rest: signature, etc
             /**** E2E *****/
 
             // check name collision
-            RemoteOperationResult collisionResult = checkNameCollision(client, metadata, parentFile.isEncrypted());
+            List<String> fileNames = new ArrayList<>();
+            if (object instanceof DecryptedFolderMetadataFileV1 metadata) {
+                for (DecryptedFile file : metadata.getFiles().values()) {
+                    fileNames.add(file.getEncrypted().getFilename());
+                }
+            } else {
+                for (com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile file :
+                    ((DecryptedFolderMetadataFile) object).getMetadata().getFiles().values()) {
+                    fileNames.add(file.getFilename());
+                }
+            }
+
+            RemoteOperationResult collisionResult = checkNameCollision(client, fileNames, parentFile.isEncrypted());
             if (collisionResult != null) {
                 result = collisionResult;
                 return collisionResult;
@@ -510,8 +545,14 @@ public class UploadFileOperation extends SyncOperation {
             // new random file name, check if it exists in metadata
             String encryptedFileName = EncryptionUtils.generateUid();
 
-            while (metadata.getMetadata().getFiles().get(encryptedFileName) != null) {
-                encryptedFileName = EncryptionUtils.generateUid();
+            if (object instanceof DecryptedFolderMetadataFileV1 metadata) {
+                while (metadata.getFiles().get(encryptedFileName) != null) {
+                    encryptedFileName = EncryptionUtils.generateUid();
+                }
+            } else {
+                while (((DecryptedFolderMetadataFile) object).getMetadata().getFiles().get(encryptedFileName) != null) {
+                    encryptedFileName = EncryptionUtils.generateUid();
+                }
             }
 
             File encryptedTempFile = File.createTempFile("encFile", encryptedFileName);
@@ -600,60 +641,79 @@ public class UploadFileOperation extends SyncOperation {
                 mFile.setDecryptedRemotePath(parentFile.getDecryptedRemotePath() + originalFile.getName());
                 mFile.setRemotePath(parentFile.getRemotePath() + encryptedFileName);
 
-                // update metadata
-//                DecryptedFile decryptedFile = new DecryptedFile();
-//                Data data = new Data();
-//                data.setFilename(mFile.getDecryptedFileName());
-//                data.setMimetype(mFile.getMimeType());
-//                data.setKey(EncryptionUtils.encodeBytesToBase64String(key));
-//
-//                decryptedFile.setEncrypted(data);
-//                decryptedFile.setInitializationVector(EncryptionUtils.encodeBytesToBase64String(iv));
-//                decryptedFile.setAuthenticationTag(encryptedFile.authenticationTag);
-//
-//                metadata.getFiles().put(encryptedFileName, decryptedFile);
 
-                encryptionUtilsV2.addFileToMetadata(
-                    encryptedFileName,
-                    mFile,
-                    iv,
-                    encryptedFile.getAuthenticationTag(),
-                    key,
-                    metadata,
-                    getStorageManager());
+                if (object instanceof DecryptedFolderMetadataFileV1 metadata) {
+                    // update metadata
+                    DecryptedFile decryptedFile = new DecryptedFile();
+                    Data data = new Data();
+                    data.setFilename(mFile.getDecryptedFileName());
+                    data.setMimetype(mFile.getMimeType());
+                    data.setKey(EncryptionUtils.encodeBytesToBase64String(key));
 
-                // TODO E2E: to check
-//                metadata.getFiles().put(encryptedFileName, decryptedFile);
-//
-//                EncryptedFolderMetadata encryptedFolderMetadata = EncryptionUtils.encryptFolderMetadata(metadata,
-//                                                                                                        publicKey,
-//                                                                                                        arbitraryDataProvider,
-//                                                                                                        user,
-//                                                                                                        parentFile.getLocalId());
-//
-//                String serializedFolderMetadata;
-//
-//                // check if we need metadataKeys
-//                if (metadata.getMetadata().getMetadataKey() != null) {
-//                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true);
-//                } else {
-//                    serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata);
-//                }
+                    decryptedFile.setEncrypted(data);
+                    decryptedFile.setInitializationVector(EncryptionUtils.encodeBytesToBase64String(iv));
+                    decryptedFile.setAuthenticationTag(encryptedFile.getAuthenticationTag());
 
-                // upload metadata
-                encryptionUtilsV2.serializeAndUploadMetadata(parentFile,
-                                                             metadata,
-                                                             token,
-                                                             client,
-                                                             metadataExists,
-                                                             mContext,
-                                                             user);
+                    metadata.getFiles().put(encryptedFileName, decryptedFile);
 
-                // unlock
-                result = EncryptionUtils.unlockFolder(parentFile, client, token);
+                    EncryptedFolderMetadataFileV1 encryptedFolderMetadata =
+                        EncryptionUtils.encryptFolderMetadata(metadata,
+                                                              publicKey,
+                                                              parentFile.getLocalId(),
+                                                              user,
+                                                              arbitraryDataProvider
+                                                             );
 
-                if (result.isSuccess()) {
-                    token = null;
+                    String serializedFolderMetadata;
+
+                    // check if we need metadataKeys
+                    if (metadata.getMetadata().getMetadataKey() != null) {
+                        serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true);
+                    } else {
+                        serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata);
+                    }
+
+                    // upload metadata
+                    EncryptionUtils.uploadMetadata(parentFile,
+                                                   serializedFolderMetadata,
+                                                   token,
+                                                   client,
+                                                   metadataExists,
+                                                   E2EVersion.V1_2,
+                                                   "");
+
+                    // unlock
+                    result = EncryptionUtils.unlockFolderV1(parentFile, client, token);
+
+                    if (result.isSuccess()) {
+                        token = null;
+                    }
+                } else {
+                    DecryptedFolderMetadataFile metadata = (DecryptedFolderMetadataFile) object;
+                    encryptionUtilsV2.addFileToMetadata(
+                        encryptedFileName,
+                        mFile,
+                        iv,
+                        encryptedFile.getAuthenticationTag(),
+                        key,
+                        metadata,
+                        getStorageManager());
+
+                    // upload metadata
+                    encryptionUtilsV2.serializeAndUploadMetadata(parentFile,
+                                                                 metadata,
+                                                                 token,
+                                                                 client,
+                                                                 metadataExists,
+                                                                 mContext,
+                                                                 user);
+
+                    // unlock
+                    result = EncryptionUtils.unlockFolder(parentFile, client, token);
+
+                    if (result.isSuccess()) {
+                        token = null;
+                    }
                 }
             }
         } catch (FileNotFoundException e) {
@@ -954,18 +1014,18 @@ public class UploadFileOperation extends SyncOperation {
 
     @CheckResult
     private RemoteOperationResult checkNameCollision(OwnCloudClient client,
-                                                     DecryptedFolderMetadataFile metadata,
+                                                     List<String> fileNames,
                                                      boolean encrypted)
         throws OperationCancelledException {
         Log_OC.d(TAG, "Checking name collision in server");
 
-        if (existsFile(client, mRemotePath, metadata, encrypted)) {
+        if (existsFile(client, mRemotePath, fileNames, encrypted)) {
             switch (mNameCollisionPolicy) {
                 case CANCEL:
                     Log_OC.d(TAG, "File exists; canceling");
                     throw new OperationCancelledException();
                 case RENAME:
-                    mRemotePath = getNewAvailableRemotePath(client, mRemotePath, metadata, encrypted);
+                    mRemotePath = getNewAvailableRemotePath(client, mRemotePath, fileNames, encrypted);
                     mWasRenamed = true;
                     createNewOCFile(mRemotePath);
                     Log_OC.d(TAG, "File renamed as " + mRemotePath);
@@ -1127,10 +1187,12 @@ public class UploadFileOperation extends SyncOperation {
      *
      * @param client     OwnCloud client
      * @param remotePath remote path of the file
-     * @param metadata   metadata of encrypted folder
+     * @param fileNames  list of decrypted file names
      * @return new remote path
      */
-    private String getNewAvailableRemotePath(OwnCloudClient client, String remotePath, DecryptedFolderMetadataFile metadata,
+    private String getNewAvailableRemotePath(OwnCloudClient client,
+                                             String remotePath,
+                                             List<String> fileNames,
                                              boolean encrypted) {
         int extPos = remotePath.lastIndexOf('.');
         String suffix;
@@ -1147,20 +1209,22 @@ public class UploadFileOperation extends SyncOperation {
         do {
             suffix = " (" + count + ")";
             newPath = extPos >= 0 ? remotePathWithoutExtension + suffix + "." + extension : remotePath + suffix;
-            exists = existsFile(client, newPath, metadata, encrypted);
+            exists = existsFile(client, newPath, fileNames, encrypted);
             count++;
         } while (exists);
 
         return newPath;
     }
 
-    private boolean existsFile(OwnCloudClient client, String remotePath, DecryptedFolderMetadataFile metadata,
+    private boolean existsFile(OwnCloudClient client,
+                               String remotePath,
+                               List<String> fileNames,
                                boolean encrypted) {
         if (encrypted) {
             String fileName = new File(remotePath).getName();
 
-            for (DecryptedFile file : metadata.getMetadata().getFiles().values()) {
-                if (file.getFilename().equalsIgnoreCase(fileName)) {
+            for (String name : fileNames) {
+                if (name.equalsIgnoreCase(fileName)) {
                     return true;
                 }
             }

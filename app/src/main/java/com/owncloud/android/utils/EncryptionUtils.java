@@ -55,6 +55,7 @@ import com.owncloud.android.lib.resources.e2ee.MetadataResponse;
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.StoreMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UnlockFileRemoteOperation;
+import com.owncloud.android.lib.resources.e2ee.UnlockFileV1RemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.status.E2EVersion;
@@ -234,7 +235,7 @@ public final class EncryptionUtils {
         }
 
         // set checksum
-        String mnemonic = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.MNEMONIC);
+        String mnemonic = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.MNEMONIC).trim();
         String checksum = EncryptionUtils.generateChecksum(decryptedFolderMetadata, mnemonic);
         encryptedFolderMetadata.getMetadata().setChecksum(checksum);
 
@@ -1416,6 +1417,14 @@ public final class EncryptionUtils {
     public static RemoteOperationResult<Void> unlockFolder(OCFile parentFolder, OwnCloudClient client, String token) {
         if (token != null) {
             return new UnlockFileRemoteOperation(parentFolder.getLocalId(), token).execute(client);
+        } else {
+            return new RemoteOperationResult<>(new Exception("No token available"));
+        }
+    }
+
+    public static RemoteOperationResult<Void> unlockFolderV1(OCFile parentFolder, OwnCloudClient client, String token) {
+        if (token != null) {
+            return new UnlockFileV1RemoteOperation(parentFolder.getLocalId(), token).execute(client);
         } else {
             return new RemoteOperationResult<>(new Exception("No token available"));
         }

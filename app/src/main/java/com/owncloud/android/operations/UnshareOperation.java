@@ -79,7 +79,7 @@ public class UnshareOperation extends SyncOperation {
         if (share != null) {
             OCFile file = getStorageManager().getFileByEncryptedRemotePath(remotePath);
 
-            if (file.isEncrypted()) {
+            if (file.isEncrypted() && share.getShareType() != ShareType.PUBLIC_LINK) {
                 // E2E: lock folder
                 try {
                     token = EncryptionUtils.lockFolder(file, client, file.getE2eCounter() + 1);
@@ -128,9 +128,11 @@ public class UnshareOperation extends SyncOperation {
 
             if (result.isSuccess()) {
                 // E2E: unlock folder
-                RemoteOperationResult<Void> unlockResult = EncryptionUtils.unlockFolder(file, client, token);
-                if (!unlockResult.isSuccess()) {
-                    return new RemoteOperationResult<>(new RuntimeException("Unlock failed"));
+                if (file.isEncrypted() && share.getShareType() != ShareType.PUBLIC_LINK) {
+                    RemoteOperationResult<Void> unlockResult = EncryptionUtils.unlockFolder(file, client, token);
+                    if (!unlockResult.isSuccess()) {
+                        return new RemoteOperationResult<>(new RuntimeException("Unlock failed"));
+                    }
                 }
 
                 Log_OC.d(TAG, "Share id = " + share.getRemoteId() + " deleted");

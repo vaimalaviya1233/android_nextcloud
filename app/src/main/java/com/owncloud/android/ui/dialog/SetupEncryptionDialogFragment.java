@@ -201,7 +201,8 @@ public class SetupEncryptionDialogFragment extends DialogFragment implements Inj
                                                                                            mnemonic);
 
                             arbitraryDataProvider.storeOrUpdateKeyValue(user.getAccountName(),
-                                                                        EncryptionUtils.PRIVATE_KEY, decryptedPrivateKey);
+                                                                        EncryptionUtils.PRIVATE_KEY,
+                                                                        decryptedPrivateKey);
 
                             dialog1.dismiss();
                             Log_OC.d(TAG, "Private key successfully decrypted and stored");

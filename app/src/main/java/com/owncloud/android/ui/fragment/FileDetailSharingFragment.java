@@ -219,7 +219,18 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
 
         if (file.canReshare()) {
             if (file.isEncrypted() || (parentFile != null && parentFile.isEncrypted())) {
-                binding.searchView.setQueryHint(getResources().getString(R.string.secure_share_search));
+                if (file.getE2eCounter() == -1) {
+                    // V1 cannot share
+                    binding.searchContainer.setVisibility(View.GONE);
+                } else {
+                    binding.searchView.setQueryHint(getResources().getString(R.string.secure_share_search));
+
+                    if (file.isSharedViaLink()) {
+                        binding.searchView.setQueryHint(getResources().getString(R.string.share_not_allowed_when_file_drop));
+                        binding.searchView.setInputType(InputType.TYPE_NULL);
+                        disableSearchView(binding.searchView);
+                    }
+                }
             } else {
                 binding.searchView.setQueryHint(getResources().getString(R.string.share_search));
             }
@@ -429,6 +440,7 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
      * before reading database.
      */
     public void refreshSharesFromDB() {
+        file = fileDataStorageManager.getFileById(file.getFileId());
         ShareeListAdapter adapter = (ShareeListAdapter) binding.sharesList.getAdapter();
 
         if (adapter == null) {
