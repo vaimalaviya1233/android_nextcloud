@@ -441,6 +441,7 @@ public final class EncryptionUtils {
                                                  user,
                                                  folder.getLocalId());
                 } catch (Exception e) {
+                    // TODO do not crash, but show meaningful error 
                     Log_OC.e(TAG, "Could not decrypt metadata for " + folder.getDecryptedFileName(), e);
                     return null;
                 }
