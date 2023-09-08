@@ -289,6 +289,26 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                                                                            token)
                 .execute(client);
 
+            RemoteOperationResult remoteSubFolderOperationResult = new ReadFolderRemoteOperation(encryptedRemotePath)
+                .execute(client);
+
+            RemoteFile createdRemoteSubFolder = (RemoteFile) remoteSubFolderOperationResult.getData().get(0);
+            OCFile newSubDir = createRemoteFolderOcFile(parent, filename, createdRemoteSubFolder);
+            getStorageManager().saveFile(newSubDir);
+
+            if (result.isSuccess()) {
+                DecryptedFolderMetadataFile subFolderMetadata = encryptionUtilsV2.createDecryptedFolderMetadataFile();
+
+                // upload metadata
+                encryptionUtilsV2.serializeAndUploadMetadata(newSubDir,
+                                                             subFolderMetadata,
+                                                             token,
+                                                             client,
+                                                             false,
+                                                             context,
+                                                             user);
+            }
+
             if (result.isSuccess()) {
                 // update metadata
                 DecryptedFolderMetadataFile updatedMetadataFile = encryptionUtilsV2.addFolderToMetadata(encryptedFileName,
@@ -316,22 +336,23 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                     }
                 }
 
-                RemoteOperationResult remoteFolderOperationResult = new ReadFolderRemoteOperation(encryptedRemotePath)
-                    .execute(client);
-
-                createdRemoteFolder = (RemoteFile) remoteFolderOperationResult.getData().get(0);
-                OCFile newDir = createRemoteFolderOcFile(parent, filename, createdRemoteFolder);
-                getStorageManager().saveFile(newDir);
-
-                RemoteOperationResult encryptionOperationResult = new ToggleEncryptionRemoteOperation(
-                    newDir.getLocalId(),
-                    newDir.getRemotePath(),
-                    true)
-                    .execute(client);
-
-                if (!encryptionOperationResult.isSuccess()) {
-                    throw new RuntimeException("Error creating encrypted subfolder!");
-                }
+                // TODO check if not needed?
+//                RemoteOperationResult remoteFolderOperationResult = new ReadFolderRemoteOperation(encryptedRemotePath)
+//                    .execute(client);
+//
+//                createdRemoteFolder = (RemoteFile) remoteFolderOperationResult.getData().get(0);
+//                OCFile newDir = createRemoteFolderOcFile(parent, filename, createdRemoteFolder);
+//                getStorageManager().saveFile(newDir);
+//
+//                RemoteOperationResult encryptionOperationResult = new ToggleEncryptionRemoteOperation(
+//                    newDir.getLocalId(),
+//                    newDir.getRemotePath(),
+//                    true)
+//                    .execute(client);
+//
+//                if (!encryptionOperationResult.isSuccess()) {
+//                    throw new RuntimeException("Error creating encrypted subfolder!");
+//                }
             } else {
                 // revert to sane state in case of any error
                 Log_OC.e(TAG, remotePath + " hasn't been created");
@@ -339,6 +360,8 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
 
             return result;
         } catch (Exception e) {
+            // TODO remove folder
+
             if (!EncryptionUtils.unlockFolder(parent, client, token).isSuccess()) {
                 throw new RuntimeException("Could not clean up after failing folder creation!", e);
             }

@@ -1775,7 +1775,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_1 ||
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_2
                 ) {
-                    // encrypt on V1
+                    // TODO encrypt on V1
                 } else if (ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.UNKNOWN) {
                     throw new IllegalArgumentException("Unknown E2E version");
                 }
