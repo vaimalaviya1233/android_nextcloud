@@ -220,7 +220,8 @@ public class CreateShareWithShareeOperation extends SyncOperation {
                                                              client,
                                                              metadataExists,
                                                              context,
-                                                             user);
+                                                             user,
+                                                             getStorageManager());
             } catch (UploadException e) {
                 return new RemoteOperationResult<>(new RuntimeException("Uploading metadata failed"));
             }

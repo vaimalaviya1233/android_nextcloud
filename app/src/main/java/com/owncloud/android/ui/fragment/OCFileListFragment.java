@@ -1770,7 +1770,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                                                        client,
                                                                        metadataExists,
                                                                        requireContext(),
-                                                                       user);
+                                                                       user,
+                                                                       storageManager);
                 } else if (ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_0 ||
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_1 ||
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_2

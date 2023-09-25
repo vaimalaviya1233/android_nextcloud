@@ -117,7 +117,8 @@ public class UnshareOperation extends SyncOperation {
                                                                  client,
                                                                  true,
                                                                  context,
-                                                                 user);
+                                                                 user,
+                                                                 getStorageManager());
                 } catch (UploadException e) {
                     return new RemoteOperationResult(new RuntimeException("Upload of metadata failed!"));
                 }

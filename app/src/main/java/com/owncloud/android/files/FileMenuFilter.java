@@ -187,7 +187,7 @@ public class FileMenuFilter {
 
 
     private void filterShareFile(List<Integer> toHide, OCCapability capability) {
-        if (!isSingleSelection() || containsEncryptedFile() ||
+        if (!isSingleSelection() || containsEncryptedFile() || hasEncryptedParent() ||
             (!isShareViaLinkAllowed() && !isShareWithUsersAllowed()) ||
             !isShareApiEnabled(capability) || !files.iterator().next().canReshare()) {
             toHide.add(R.id.action_send_share_file);

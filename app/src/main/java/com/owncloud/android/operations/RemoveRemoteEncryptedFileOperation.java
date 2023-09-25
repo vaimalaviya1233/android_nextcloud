@@ -26,6 +26,7 @@ import android.content.Context;
 import com.nextcloud.client.account.User;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
+import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
 import com.owncloud.android.lib.common.OwnCloudClient;
@@ -135,7 +136,8 @@ public class RemoveRemoteEncryptedFileOperation extends RemoteOperation<Void> {
                                                          client,
                                                          metadataExists,
                                                          context,
-                                                         user);
+                                                         user,
+                                                         new FileDataStorageManager(user, context.getContentResolver()));
 
             // return success
             return result;

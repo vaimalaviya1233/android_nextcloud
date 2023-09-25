@@ -284,36 +284,35 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
             String encryptedFileName = createRandomFileName(metadata);
             encryptedRemotePath = parent.getRemotePath() + encryptedFileName;
 
-            RemoteOperationResult result = new CreateFolderRemoteOperation(encryptedRemotePath,
-                                                                           true,
-                                                                           token)
+            RemoteOperationResult<String> result = new CreateFolderRemoteOperation(encryptedRemotePath,
+                                                                                   true,
+                                                                                   token)
                 .execute(client);
 
-            RemoteOperationResult remoteSubFolderOperationResult = new ReadFolderRemoteOperation(encryptedRemotePath)
-                .execute(client);
-
-            RemoteFile createdRemoteSubFolder = (RemoteFile) remoteSubFolderOperationResult.getData().get(0);
-            OCFile newSubDir = createRemoteFolderOcFile(parent, filename, createdRemoteSubFolder);
-            getStorageManager().saveFile(newSubDir);
+            String remoteId = result.getResultData();
 
             if (result.isSuccess()) {
                 DecryptedFolderMetadataFile subFolderMetadata = encryptionUtilsV2.createDecryptedFolderMetadataFile();
 
                 // upload metadata
-                encryptionUtilsV2.serializeAndUploadMetadata(newSubDir,
+                encryptionUtilsV2.serializeAndUploadMetadata(remoteId,
                                                              subFolderMetadata,
                                                              token,
                                                              client,
                                                              false,
                                                              context,
-                                                             user);
+                                                             user,
+                                                             parent,
+                                                             getStorageManager());
             }
 
             if (result.isSuccess()) {
                 // update metadata
                 DecryptedFolderMetadataFile updatedMetadataFile = encryptionUtilsV2.addFolderToMetadata(encryptedFileName,
                                                                                                         filename,
-                                                                                                        metadata);
+                                                                                                        metadata,
+                                                                                                        parent,
+                                                                                                        getStorageManager());
 
                 // upload metadata
                 encryptionUtilsV2.serializeAndUploadMetadata(parent,
@@ -322,7 +321,8 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
                                                              client,
                                                              metadataExists,
                                                              context,
-                                                             user);
+                                                             user,
+                                                             getStorageManager());
 
                 // unlock folder
                 if (token != null) {

@@ -1379,9 +1379,9 @@ public final class EncryptionUtils {
             // update metadata
             if (version == E2EVersion.V2_0) {
                 uploadMetadataOperationResult = new UpdateMetadataV2RemoteOperation(
-                    parentFile.getLocalId(),
+                    parentFile.getRemoteId(),
                     serializedFolderMetadata,
-                    token, 
+                    token,
                     signature)
                     .execute(client);
             } else {
@@ -1395,7 +1395,7 @@ public final class EncryptionUtils {
             // store metadata
             if (version == E2EVersion.V2_0) {
                 uploadMetadataOperationResult = new StoreMetadataV2RemoteOperation(
-                    parentFile.getLocalId(),
+                    parentFile.getRemoteId(),
                     serializedFolderMetadata,
                     token,
                     signature

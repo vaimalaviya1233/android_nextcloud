@@ -706,7 +706,8 @@ public class UploadFileOperation extends SyncOperation {
                                                                  client,
                                                                  metadataExists,
                                                                  mContext,
-                                                                 user);
+                                                                 user,
+                                                                 getStorageManager());
 
                     // unlock
                     result = EncryptionUtils.unlockFolder(parentFile, client, token);

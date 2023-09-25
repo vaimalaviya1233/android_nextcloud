@@ -103,32 +103,36 @@ class EncryptionUtilsV2 {
     fun encryptFolderMetadataFile(
         metadataFile: DecryptedFolderMetadataFile,
         userId: String,
-        certificate: String
+        folder: OCFile,
+        storageManager: FileDataStorageManager,
+        client: OwnCloudClient,
+        privateKey: String
     ): EncryptedFolderMetadataFile {
         val encryptedUsers: List<EncryptedUser>
         val encryptedMetadata: EncryptedMetadata
         if (metadataFile.users.isEmpty()) {
-            encryptedUsers = arrayListOf(
-                encryptUser(
-                    DecryptedUser(userId, certificate),
-                    metadataFile.metadata.metadataKey
-                )
-            )
-            // TODO later add subfolder
-            // we are in a subfolder, re-use users array
-            // val key = retrieveTopMostMetadataKey(
-            //     ocFile,
-            //     storageManager,
-            //     client,
-            //     userId,
-            //     privateKey
+            // encryptedUsers = arrayListOf(
+            //     encryptUser(
+            //         DecryptedUser(userId, certificate),
+            //         metadataFile.metadata.metadataKey
+            //     )
             // )
-            //
-            // // do not store metadata key
-            // metadataFile.metadata.metadataKey = ""
-            //
-            // encryptedUsers = emptyList()
-            encryptedMetadata = encryptMetadata(metadataFile.metadata, metadataFile.metadata.metadataKey)
+
+            // we are in a subfolder, re-use users array
+            val key = retrieveTopMostMetadataKey(
+                folder,
+                storageManager,
+                client,
+                userId,
+                privateKey
+            )
+
+            // do not store metadata key
+            metadataFile.metadata.metadataKey = ByteArray(0)
+            metadataFile.metadata.keyChecksums.clear()
+
+            encryptedUsers = emptyList()
+            encryptedMetadata = encryptMetadata(metadataFile.metadata, key)
         } else {
             encryptedUsers = metadataFile.users.map {
                 encryptUser(
@@ -176,11 +180,14 @@ class EncryptionUtilsV2 {
         oldCounter: Long,
         signature: String
     ): DecryptedFolderMetadataFile {
-        val encryptedUser = metadataFile.users.find { it.userId == userId }
+        val parent =
+            storageManager.getFileById(ocFile.parentId) ?: throw IllegalStateException("Cannot retrieve metadata")
 
-        val decryptedFolderMetadataFile = if (encryptedUser == null) {
+        // val decryptedFolderMetadataFile = if (encryptedUser == null) {
+
+        val decryptedFolderMetadataFile = if (parent.isEncrypted) {
             // we are in a subfolder, decrypt information is in top most encrypted folder
-            val metadataKey = retrieveTopMostMetadataKey(
+            val topMostMetadata = retrieveTopMostMetadata(
                 ocFile,
                 storageManager,
                 client,
@@ -188,15 +195,19 @@ class EncryptionUtilsV2 {
                 privateKey
             )
 
-            val decryptedMetadata = decryptMetadata(metadataFile.metadata, metadataKey)
-            decryptedMetadata.metadataKey = metadataKey
+            val decryptedMetadata = decryptMetadata(metadataFile.metadata, topMostMetadata.metadata.metadataKey)
+            decryptedMetadata.metadataKey = topMostMetadata.metadata.metadataKey
+            decryptedMetadata.keyChecksums.addAll(topMostMetadata.metadata.keyChecksums)
 
             DecryptedFolderMetadataFile(
                 decryptedMetadata,
-                mutableListOf(),
-                mutableMapOf() // TODO
+                topMostMetadata.users,
+                topMostMetadata.filedrop
             )
         } else {
+            val encryptedUser = metadataFile.users.find { it.userId == userId }
+                ?: throw throw IllegalStateException("Cannot find current user in metadata")
+
             val decryptedMetadataKey = decryptMetadataKey(encryptedUser, privateKey)
 
             val users = metadataFile.users.map { transformUser(it) }.toMutableList()
@@ -220,13 +231,13 @@ class EncryptionUtilsV2 {
 
     @Throws(IllegalStateException::class)
     @Suppress("ThrowsCount")
-    fun retrieveTopMostMetadataKey(
+    fun retrieveTopMostMetadata(
         folder: OCFile,
         storageManager: FileDataStorageManager,
         client: OwnCloudClient,
         userId: String,
         privateKey: String
-    ): ByteArray {
+    ): DecryptedFolderMetadataFile {
         var topMost = folder
         var parent =
             storageManager.getFileById(topMost.parentId) ?: throw IllegalStateException("Cannot retrieve metadata")
@@ -254,12 +265,25 @@ class EncryptionUtilsV2 {
                 topMost,
                 storageManager,
                 client,
-                folder.e2eCounter,
+                topMost.e2eCounter,
                 result.resultData.signature
-            ).metadata.metadataKey
+            )
         } else {
             throw IllegalStateException("Cannot retrieve metadata")
         }
+    }
+
+    @Throws(IllegalStateException::class)
+    @Suppress("ThrowsCount")
+    fun retrieveTopMostMetadataKey(
+        folder: OCFile,
+        storageManager: FileDataStorageManager,
+        client: OwnCloudClient,
+        userId: String,
+        privateKey: String
+    ): ByteArray {
+        return retrieveTopMostMetadata(folder, storageManager, client, userId, privateKey)
+            .metadata.metadataKey
     }
 
     @VisibleForTesting
@@ -383,11 +407,14 @@ class EncryptionUtilsV2 {
     fun addFolderToMetadata(
         encryptedFileName: String,
         fileName: String,
-        metadataFile: DecryptedFolderMetadataFile
+        metadataFile: DecryptedFolderMetadataFile,
+        ocFile: OCFile,
+        fileDataStorageManager: FileDataStorageManager
     ): DecryptedFolderMetadataFile {
         metadataFile.metadata.folders[encryptedFileName] = fileName
-
-        // TODO change metadata key always?
+        metadataFile.metadata.counter++
+        ocFile.setE2eCounter(metadataFile.metadata.counter)
+        fileDataStorageManager.saveFile(ocFile)
 
         return metadataFile
     }
@@ -662,15 +689,41 @@ class EncryptionUtilsV2 {
     }
 
     @Throws(UploadException::class)
-    @Suppress("LongParameterList")
     fun serializeAndUploadMetadata(
-        parentFile: OCFile,
+        folder: OCFile,
         metadata: DecryptedFolderMetadataFile,
         token: String,
         client: OwnCloudClient,
         metadataExists: Boolean,
         context: Context,
-        user: User
+        user: User,
+        storageManager: FileDataStorageManager
+    ) {
+        serializeAndUploadMetadata(
+            folder.remoteId,
+            metadata,
+            token,
+            client,
+            metadataExists,
+            context,
+            user,
+            folder,
+            storageManager
+        )
+    }
+
+    @Throws(UploadException::class)
+    @Suppress("LongParameterList")
+    fun serializeAndUploadMetadata(
+        remoteId: String,
+        metadata: DecryptedFolderMetadataFile,
+        token: String,
+        client: OwnCloudClient,
+        metadataExists: Boolean,
+        context: Context,
+        user: User,
+        folder: OCFile,
+        storageManager: FileDataStorageManager
     ) {
         val arbitraryDataProvider: ArbitraryDataProvider = ArbitraryDataProviderImpl(context)
         val privateKeyString: String = arbitraryDataProvider.getValue(user.accountName, EncryptionUtils.PRIVATE_KEY)
@@ -679,7 +732,10 @@ class EncryptionUtilsV2 {
         val encryptedFolderMetadata = encryptFolderMetadataFile(
             metadata,
             client.userId,
-            publicKeyString
+            folder,
+            storageManager,
+            client,
+            privateKeyString
         )
         val serializedFolderMetadata = EncryptionUtils.serializeJSON(encryptedFolderMetadata, true)
         val cert = EncryptionUtils.convertCertFromString(publicKeyString)
@@ -689,7 +745,7 @@ class EncryptionUtilsV2 {
         val uploadMetadataOperationResult = if (metadataExists) {
             // update metadata
             UpdateMetadataV2RemoteOperation(
-                parentFile.localId,
+                remoteId,
                 serializedFolderMetadata,
                 token,
                 signature
@@ -698,7 +754,7 @@ class EncryptionUtilsV2 {
         } else {
             // store metadata
             StoreMetadataV2RemoteOperation(
-                parentFile.localId,
+                remoteId,
                 serializedFolderMetadata,
                 token,
                 signature
