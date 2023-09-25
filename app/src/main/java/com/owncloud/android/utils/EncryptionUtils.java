@@ -416,11 +416,18 @@ public final class EncryptionUtils {
         }
 
         // decrypt metadata
+        EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
         String serializedEncryptedMetadata = getMetadataOperationResult.getResultData().getMetadata();
 
+        return encryptionUtilsV2.parseAnyMetadata(getMetadataOperationResult.getResultData(),
+                                                  user,
+                                                  client,
+                                                  context,
+                                                  folder);
+        /*
         E2EVersion version = determinateVersion(serializedEncryptedMetadata);
 
-        EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
+        
 
         switch (version) {
             case UNKNOWN:
@@ -454,6 +461,8 @@ public final class EncryptionUtils {
                                                           folder);
         }
         return null;
+        
+        */
     }
 
     public static E2EVersion determinateVersion(String metadata) {

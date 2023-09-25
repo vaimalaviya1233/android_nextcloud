@@ -475,11 +475,14 @@ public class RefreshFolderOperation extends RemoteOperation {
         // update size
         mLocalFolder.setFileLength(remoteFolder.getFileLength());
 
-        Object object = getDecryptedFolderMetadata(encryptedAncestor,
-                                                   mLocalFolder,
-                                                   getClient(),
-                                                   user,
-                                                   mContext);
+        Object object = null;
+        if (mLocalFolder.isEncrypted()) {
+            object = getDecryptedFolderMetadata(encryptedAncestor,
+                                                mLocalFolder,
+                                                getClient(),
+                                                user,
+                                                mContext);
+        }
 
         if (encryptedAncestor && object == null) {
             throw new IllegalStateException("metadata is null!");

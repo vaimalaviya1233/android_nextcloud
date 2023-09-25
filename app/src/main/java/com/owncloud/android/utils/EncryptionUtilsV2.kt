@@ -555,7 +555,12 @@ class EncryptionUtilsV2 {
                 migrateV1ToV2(
                     decryptedV1,
                     client.userIdPlain,
-                    publicKey
+                    publicKey,
+                    folder,
+                    storageManager,
+                    client,
+                    user,
+                    context
                 )
             } catch (e: Exception) {
                 // TODO do better
@@ -655,26 +660,73 @@ class EncryptionUtilsV2 {
     fun migrateV1ToV2(
         v1: DecryptedFolderMetadataFileV1,
         userId: String,
-        cert: String
+        cert: String,
+        folder: OCFile,
+        storageManager: FileDataStorageManager,
+        client: OwnCloudClient,
+        user: User,
+        context: Context
     ): DecryptedFolderMetadataFile {
+        // key
+        val key = if (v1.metadata.metadataKeys != null && v1.metadata.metadataKeys.size > 1) {
+            v1.metadata.metadataKeys[0]
+        } else {
+            v1.metadata.metadataKey
+        }
+
         // create new metadata
         val metadataV2 = DecryptedMetadata(
             mutableListOf(),
             false,
             0,
-            mutableMapOf(),
-            v1.files.mapValues { migrateDecryptedFileV1ToV2(it.value) }.toMutableMap(),
-            EncryptionUtils.decodeStringToBase64Bytes(v1.metadata.metadataKeys[0])
-                ?: throw IllegalStateException("Metadata key not found!")
+            v1
+                .files
+                .filter { it.value.encrypted.mimetype == MimeType.WEBDAV_FOLDER }
+                .mapValues { it.value.encrypted.filename }
+                .toMutableMap(),
+            v1
+                .files
+                .filter { it.value.encrypted.mimetype != MimeType.WEBDAV_FOLDER }
+                .mapValues { migrateDecryptedFileV1ToV2(it.value) }
+                .toMutableMap(),
+            EncryptionUtils.decodeStringToBase64Bytes(key) ?: throw IllegalStateException("Metadata key not found!")
         )
 
         // upon migration there can only be one user, as there is no sharing yet in place
-        val users = mutableListOf(DecryptedUser(userId, cert))
+        val users = if (storageManager.getFileById(folder.parentId)?.isEncrypted == false) {
+            mutableListOf(DecryptedUser(userId, cert))
+        } else {
+            mutableListOf()
+        }
 
         // TODO
         val filedrop = mutableMapOf<String, DecryptedFile>()
 
-        return DecryptedFolderMetadataFile(metadataV2, users, filedrop)
+        val newMetadata = DecryptedFolderMetadataFile(metadataV2, users, filedrop)
+        val metadataKey = EncryptionUtils.generateKey() ?: throw UploadException("Could not encrypt folder!")
+
+        newMetadata.metadata.metadataKey = metadataKey
+        newMetadata.metadata.keyChecksums.add(EncryptionUtilsV2().hashMetadataKey(metadataKey))
+
+        // lock
+        val token = EncryptionUtils.lockFolder(folder, client)
+
+        // upload
+        serializeAndUploadMetadata(
+            folder,
+            newMetadata,
+            token,
+            client,
+            true,
+            context,
+            user,
+            storageManager
+        )
+
+        // unlock
+        EncryptionUtils.unlockFolder(folder, client, token)
+
+        return newMetadata
     }
 
     @VisibleForTesting
