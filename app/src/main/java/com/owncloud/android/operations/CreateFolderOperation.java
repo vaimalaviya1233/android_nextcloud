@@ -156,9 +156,9 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
             String encryptedFileName = createRandomFileName(metadata);
             encryptedRemotePath = parent.getRemotePath() + encryptedFileName;
 
-            RemoteOperationResult result = new CreateFolderRemoteOperation(encryptedRemotePath,
-                                                                           true,
-                                                                           token)
+            RemoteOperationResult<String> result = new CreateFolderRemoteOperation(encryptedRemotePath,
+                                                                                   true,
+                                                                                   token)
                 .execute(client);
 
             if (result.isSuccess()) {
@@ -184,7 +184,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
 
                 // unlock folder
                 if (token != null) {
-                    RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolder(parent, client, token);
+                    RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolderV1(parent, client, token);
 
                     if (unlockFolderResult.isSuccess()) {
                         token = null;
@@ -217,7 +217,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
 
             return result;
         } catch (Exception e) {
-            if (!EncryptionUtils.unlockFolder(parent, client, token).isSuccess()) {
+            if (!EncryptionUtils.unlockFolderV1(parent, client, token).isSuccess()) {
                 throw new RuntimeException("Could not clean up after failing folder creation!", e);
             }
 
@@ -241,7 +241,7 @@ public class CreateFolderOperation extends SyncOperation implements OnRemoteOper
         } finally {
             // unlock folder
             if (token != null) {
-                RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolder(parent, client, token);
+                RemoteOperationResult unlockFolderResult = EncryptionUtils.unlockFolderV1(parent, client, token);
 
                 if (!unlockFolderResult.isSuccess()) {
                     // TODO E2E: do better

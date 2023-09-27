@@ -40,6 +40,7 @@ import com.owncloud.android.datamodel.UploadsStorageManager;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.Data;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFile;
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1;
+import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedMetadata;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFile;
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1;
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFolderMetadataFile;
@@ -68,6 +69,7 @@ import com.owncloud.android.utils.FileUtil;
 import com.owncloud.android.utils.MimeType;
 import com.owncloud.android.utils.MimeTypeUtil;
 import com.owncloud.android.utils.UriUtils;
+import com.owncloud.android.utils.theme.CapabilityUtils;
 
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.RequestEntity;
@@ -86,6 +88,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -461,8 +464,11 @@ public class UploadFileOperation extends SyncOperation {
                 return result;
             }
             /***** E2E *****/
-            // whenever we change something, increase counter
-            long counter = parentFile.getE2eCounter() + 1;
+            // Only on V2+: whenever we change something, increase counter
+            long counter = -1;
+            if (CapabilityUtils.getCapability(mContext).getEndToEndEncryptionApiVersion().compareTo(E2EVersion.V2_0) >= 0) {
+                counter = parentFile.getE2eCounter() + 1;
+            }
 
             // we might have an old token from interrupted upload
             if (mFolderUnlockToken != null && !mFolderUnlockToken.isEmpty()) {
@@ -484,11 +490,25 @@ public class UploadFileOperation extends SyncOperation {
 
             Object object = EncryptionUtils.downloadFolderMetadata(parentFile, client, mContext, user, token);
 
-            if (object == null) {
-                // TODO return error
-                return new RemoteOperationResult(new IllegalStateException("Metadata does not exist"));
+            if (CapabilityUtils.getCapability(mContext).getEndToEndEncryptionApiVersion().compareTo(E2EVersion.V2_0) >= 0) {
+                if (object == null) {
+                    // TODO return error
+                    return new RemoteOperationResult(new IllegalStateException("Metadata does not exist"));
+                } else {
+                    metadataExists = true;
+                }
             } else {
-                metadataExists = true;
+                // v1 is allowed to be null, thus create it
+                DecryptedFolderMetadataFileV1 metadata = new DecryptedFolderMetadataFileV1();
+                metadata.setMetadata(new DecryptedMetadata());
+                metadata.getMetadata().setVersion(1.2);
+                metadata.getMetadata().setMetadataKeys(new HashMap<>());
+                String metadataKey = EncryptionUtils.encodeBytesToBase64String(EncryptionUtils.generateKey());
+                String encryptedMetadataKey = EncryptionUtils.encryptStringAsymmetric(metadataKey, publicKey);
+                metadata.getMetadata().setMetadataKey(encryptedMetadataKey);
+
+                object = metadata;
+                metadataExists = false;
             }
 
             // todo fail if no metadata

@@ -29,8 +29,10 @@ import com.google.gson.reflect.TypeToken
 import com.nextcloud.client.account.User
 import com.owncloud.android.datamodel.ArbitraryDataProvider
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl
+import com.owncloud.android.datamodel.EncryptedFiledrop
 import com.owncloud.android.datamodel.FileDataStorageManager
 import com.owncloud.android.datamodel.OCFile
+import com.owncloud.android.datamodel.e2e.v1.decrypted.Data
 import com.owncloud.android.datamodel.e2e.v1.decrypted.DecryptedFolderMetadataFileV1
 import com.owncloud.android.datamodel.e2e.v1.encrypted.EncryptedFolderMetadataFileV1
 import com.owncloud.android.datamodel.e2e.v2.decrypted.DecryptedFile
@@ -145,7 +147,8 @@ class EncryptionUtilsV2 {
 
         return EncryptedFolderMetadataFile(
             encryptedMetadata,
-            encryptedUsers
+            encryptedUsers,
+            mutableMapOf()
         )
 
         // if (metadataFile.users.isEmpty()) {
@@ -183,8 +186,6 @@ class EncryptionUtilsV2 {
         val parent =
             storageManager.getFileById(ocFile.parentId) ?: throw IllegalStateException("Cannot retrieve metadata")
 
-        // val decryptedFolderMetadataFile = if (encryptedUser == null) {
-
         val decryptedFolderMetadataFile = if (parent.isEncrypted) {
             // we are in a subfolder, decrypt information is in top most encrypted folder
             val topMostMetadata = retrieveTopMostMetadata(
@@ -199,10 +200,48 @@ class EncryptionUtilsV2 {
             decryptedMetadata.metadataKey = topMostMetadata.metadata.metadataKey
             decryptedMetadata.keyChecksums.addAll(topMostMetadata.metadata.keyChecksums)
 
+            val fileDrop = metadataFile.filedrop
+            if (fileDrop.isNotEmpty()) {
+                for (entry in fileDrop) {
+                    val key: String = entry.key
+                    val encryptedFile: EncryptedFiledrop = entry.value
+
+                    // decrypt key
+                    val encryptedKey = EncryptionUtils.decryptStringAsymmetric(
+                        encryptedFile.encryptedKey,
+                        privateKey
+                    )
+
+                    // decrypt encrypted blob with key
+                    val decryptedData = EncryptionUtils.decryptStringSymmetricAsString(
+                        encryptedFile.encrypted,
+                        EncryptionUtils.decodeStringToBase64Bytes(encryptedKey),
+                        EncryptionUtils.decodeStringToBase64Bytes(encryptedFile.encryptedInitializationVector),
+                        EncryptionUtils.decodeStringToBase64Bytes(encryptedFile.encryptedTag)
+                    )
+
+                    val data = EncryptionUtils.deserializeJSON(decryptedData,
+                        object : TypeToken<Data>() {})
+
+                    val decryptedFile = DecryptedFile(
+                        data.filename,
+                        data.mimetype,
+                        encryptedFile.initializationVector,
+                        encryptedFile.authenticationTag,
+                        encryptedFile.encryptedKey
+                    )
+
+                    decryptedMetadata.files[key] = decryptedFile
+
+                    // remove from filedrop
+                    fileDrop.remove(key)
+                }
+            }
+
             DecryptedFolderMetadataFile(
                 decryptedMetadata,
                 topMostMetadata.users,
-                topMostMetadata.filedrop
+                mutableMapOf()
             )
         } else {
             val encryptedUser = metadataFile.users.find { it.userId == userId }

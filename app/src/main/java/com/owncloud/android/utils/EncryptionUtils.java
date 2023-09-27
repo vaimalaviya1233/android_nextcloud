@@ -60,7 +60,9 @@ import com.owncloud.android.lib.resources.e2ee.UpdateMetadataRemoteOperation;
 import com.owncloud.android.lib.resources.e2ee.UpdateMetadataV2RemoteOperation;
 import com.owncloud.android.lib.resources.status.E2EVersion;
 import com.owncloud.android.lib.resources.status.NextcloudVersion;
+import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.operations.UploadException;
+import com.owncloud.android.utils.theme.CapabilityUtils;
 
 import org.apache.commons.httpclient.HttpStatus;
 
@@ -415,19 +417,19 @@ public final class EncryptionUtils {
             return null;
         }
 
+        OCCapability capability = CapabilityUtils.getCapability(context);
+
         // decrypt metadata
         EncryptionUtilsV2 encryptionUtilsV2 = new EncryptionUtilsV2();
         String serializedEncryptedMetadata = getMetadataOperationResult.getResultData().getMetadata();
 
-        return encryptionUtilsV2.parseAnyMetadata(getMetadataOperationResult.getResultData(),
-                                                  user,
-                                                  client,
-                                                  context,
-                                                  folder);
-        /*
-        E2EVersion version = determinateVersion(serializedEncryptedMetadata);
+//        return encryptionUtilsV2.parseAnyMetadata(getMetadataOperationResult.getResultData(),
+//                                                  user,
+//                                                  client,
+//                                                  context,
+//                                                  folder);
 
-        
+        E2EVersion version = determinateVersion(serializedEncryptedMetadata);
 
         switch (version) {
             case UNKNOWN:
@@ -437,16 +439,32 @@ public final class EncryptionUtils {
             case V1_0, V1_1, V1_2:
                 ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProviderImpl(context);
                 String privateKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PRIVATE_KEY);
+                String publicKey = arbitraryDataProvider.getValue(user.getAccountName(), EncryptionUtils.PUBLIC_KEY);
                 EncryptedFolderMetadataFileV1 encryptedFolderMetadata = EncryptionUtils.deserializeJSON(
                     serializedEncryptedMetadata, new TypeToken<>() {
                     });
 
                 try {
-                    return decryptFolderMetaData(encryptedFolderMetadata,
-                                                 privateKey,
-                                                 arbitraryDataProvider,
-                                                 user,
-                                                 folder.getLocalId());
+                    DecryptedFolderMetadataFileV1 v1 = decryptFolderMetaData(encryptedFolderMetadata,
+                                                                             privateKey,
+                                                                             arbitraryDataProvider,
+                                                                             user,
+                                                                             folder.getLocalId());
+
+                    if (capability.getEndToEndEncryptionApiVersion().compareTo(E2EVersion.V2_0) >= 0) {
+                        new EncryptionUtilsV2().migrateV1ToV2(
+                            v1,
+                            client.getUserId(),
+                            publicKey,
+                            folder,
+                            new FileDataStorageManager(user, context.getContentResolver()),
+                            client,
+                            user,
+                            context
+                                                             );
+                    } else {
+                        return v1;
+                    }
                 } catch (Exception e) {
                     // TODO do not crash, but show meaningful error 
                     Log_OC.e(TAG, "Could not decrypt metadata for " + folder.getDecryptedFileName(), e);
@@ -461,8 +479,6 @@ public final class EncryptionUtils {
                                                           folder);
         }
         return null;
-        
-        */
     }
 
     public static E2EVersion determinateVersion(String metadata) {
@@ -1278,17 +1294,17 @@ public final class EncryptionUtils {
         long localId = parentFile.getLocalId();
 
         GetMetadataRemoteOperation getMetadataOperation = new GetMetadataRemoteOperation(localId);
-        RemoteOperationResult getMetadataOperationResult = getMetadataOperation.execute(client);
+        RemoteOperationResult<MetadataResponse> getMetadataOperationResult = getMetadataOperation.execute(client);
 
         DecryptedFolderMetadataFileV1 metadata;
 
         if (getMetadataOperationResult.isSuccess()) {
             // decrypt metadata
-            String serializedEncryptedMetadata = (String) getMetadataOperationResult.getData().get(0);
+            String serializedEncryptedMetadata = getMetadataOperationResult.getResultData().getMetadata();
 
 
             EncryptedFolderMetadataFileV1 encryptedFolderMetadata = EncryptionUtils.deserializeJSON(
-                serializedEncryptedMetadata, new TypeToken<EncryptedFolderMetadataFileV1>() {
+                serializedEncryptedMetadata, new TypeToken<>() {
                 });
 
             return new Pair<>(Boolean.TRUE, decryptFolderMetaData(encryptedFolderMetadata,
@@ -1298,6 +1314,7 @@ public final class EncryptionUtils {
                                                                   localId));
 
         } else if (getMetadataOperationResult.getHttpCode() == HttpStatus.SC_NOT_FOUND) {
+            // TODO extract
             // new metadata
             metadata = new DecryptedFolderMetadataFileV1();
             metadata.setMetadata(new DecryptedMetadata());

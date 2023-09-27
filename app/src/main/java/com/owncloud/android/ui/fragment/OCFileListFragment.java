@@ -1772,17 +1772,19 @@ public class OCFileListFragment extends ExtendedListFragment implements
                                                                        requireContext(),
                                                                        user,
                                                                        storageManager);
+
+                    // unlock folder
+                    EncryptionUtils.unlockFolder(folder, client, token);
+
                 } else if (ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_0 ||
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_1 ||
                     ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.V1_2
                 ) {
-                    // TODO encrypt on V1
+                    // unlock folder
+                    EncryptionUtils.unlockFolderV1(folder, client, token);
                 } else if (ocCapability.getEndToEndEncryptionApiVersion() == E2EVersion.UNKNOWN) {
                     throw new IllegalArgumentException("Unknown E2E version");
                 }
-
-                // unlock folder
-                EncryptionUtils.unlockFolder(folder, client, token);
 
                 mAdapter.setEncryptionAttributeForItemID(remoteId, shouldBeEncrypted);
             } else if (remoteOperationResult.getHttpCode() == HttpStatus.SC_FORBIDDEN) {

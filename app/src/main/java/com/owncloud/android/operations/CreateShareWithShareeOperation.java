@@ -184,7 +184,8 @@ public class CreateShareWithShareeOperation extends SyncOperation {
                                                                    client,
                                                                    context,
                                                                    user,
-                                                                   token);
+                                                                   token
+                                                                  );
 
             if (object instanceof DecryptedFolderMetadataFileV1) {
                 throw new RuntimeException("Trying to share on e2e v1!");

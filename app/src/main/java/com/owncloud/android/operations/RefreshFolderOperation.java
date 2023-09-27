@@ -58,6 +58,7 @@ import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.FileStorageUtils;
 import com.owncloud.android.utils.MimeType;
 import com.owncloud.android.utils.MimeTypeUtil;
+import com.owncloud.android.utils.theme.CapabilityUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -484,8 +485,10 @@ public class RefreshFolderOperation extends RemoteOperation {
                                                 mContext);
         }
 
-        if (encryptedAncestor && object == null) {
-            throw new IllegalStateException("metadata is null!");
+        if (CapabilityUtils.getCapability(mContext).getEndToEndEncryptionApiVersion().compareTo(E2EVersion.V2_0) >= 0) {
+            if (encryptedAncestor && object == null) {
+                throw new IllegalStateException("metadata is null!");
+            }
         }
 
         // get current data about local contents of the folder to synchronize

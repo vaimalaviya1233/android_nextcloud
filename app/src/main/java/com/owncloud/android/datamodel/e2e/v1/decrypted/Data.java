@@ -26,7 +26,7 @@ public class Data {
     private String filename;
     private String mimetype;
     private String key;
-    private int version;
+    private double version;
 
     public String getKey() {
         return this.key;
@@ -40,7 +40,7 @@ public class Data {
         return this.mimetype;
     }
 
-    public int getVersion() {
+    public double getVersion() {
         return this.version;
     }
 
