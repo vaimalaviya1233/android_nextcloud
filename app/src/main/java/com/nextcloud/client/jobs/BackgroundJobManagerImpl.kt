@@ -510,7 +510,7 @@ internal class BackgroundJobManagerImpl(
         val request = periodicRequestBuilder(
             jobClass = HealthStatusWork::class,
             jobName = JOB_PERIODIC_HEALTH_STATUS,
-            intervalMins = PERIODIC_BACKUP_INTERVAL_MINUTES,
+            intervalMins = PERIODIC_BACKUP_INTERVAL_MINUTES
         ).build()
 
         workManager.enqueueUniquePeriodicWork(JOB_PERIODIC_HEALTH_STATUS, ExistingPeriodicWorkPolicy.KEEP, request)
