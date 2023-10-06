@@ -32,7 +32,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.RemoteException;
 
-import com.nextcloud.client.account.CurrentAccountProvider;
 import com.nextcloud.client.account.User;
 import com.owncloud.android.MainApp;
 import com.owncloud.android.db.OCUpload;
@@ -67,17 +66,17 @@ public class UploadsStorageManager extends Observable {
     private static final long QUERY_PAGE_SIZE = 100;
 
     private final ContentResolver contentResolver;
-    private final CurrentAccountProvider currentAccountProvider;
+    private final User user;
 
     public UploadsStorageManager(
-        CurrentAccountProvider currentAccountProvider,
+        User user,
         ContentResolver contentResolver
                                 ) {
         if (contentResolver == null) {
             throw new IllegalArgumentException("Cannot create an instance with a NULL contentResolver");
         }
         this.contentResolver = contentResolver;
-        this.currentAccountProvider = currentAccountProvider;
+        this.user = user;
     }
 
     /**
@@ -493,8 +492,6 @@ public class UploadsStorageManager extends Observable {
     }
 
     public OCUpload[] getCurrentAndPendingUploadsForCurrentAccount() {
-        User user = currentAccountProvider.getUser();
-
         return getCurrentAndPendingUploadsForAccount(user.getAccountName());
     }
 
@@ -549,9 +546,11 @@ public class UploadsStorageManager extends Observable {
             , String.valueOf(UploadStatus.UPLOAD_FAILED.value));
     }
 
-    public OCUpload[] getFinishedUploadsForCurrentAccount() {
-        User user = currentAccountProvider.getUser();
+    public OCUpload[] getUploadsForAccount(final @NonNull String accountName) {
+        return getUploads(ProviderTableMeta.UPLOADS_ACCOUNT_NAME + "== ?", accountName);
+    }
 
+    public OCUpload[] getFinishedUploadsForCurrentAccount() {
         return getUploads(ProviderTableMeta.UPLOADS_STATUS + "==" + UploadStatus.UPLOAD_SUCCEEDED.value + AND +
                               ProviderTableMeta.UPLOADS_ACCOUNT_NAME + "== ?", user.getAccountName());
     }
@@ -565,8 +564,6 @@ public class UploadsStorageManager extends Observable {
     }
 
     public OCUpload[] getFailedButNotDelayedUploadsForCurrentAccount() {
-        User user = currentAccountProvider.getUser();
-
         return getUploads(ProviderTableMeta.UPLOADS_STATUS + "==" + UploadStatus.UPLOAD_FAILED.value +
                         AND + ProviderTableMeta.UPLOADS_LAST_RESULT +
                         "<>" + UploadResult.DELAYED_FOR_WIFI.getValue() +
@@ -604,7 +601,6 @@ public class UploadsStorageManager extends Observable {
     }
 
     public long clearFailedButNotDelayedUploads() {
-        User user = currentAccountProvider.getUser();
         final long deleted = getDB().delete(
                 ProviderTableMeta.CONTENT_URI_UPLOADS,
                 ProviderTableMeta.UPLOADS_STATUS + "==" + UploadStatus.UPLOAD_FAILED.value +
@@ -627,7 +623,6 @@ public class UploadsStorageManager extends Observable {
     }
 
     public long clearSuccessfulUploads() {
-        User user = currentAccountProvider.getUser();
         final long deleted = getDB().delete(
                 ProviderTableMeta.CONTENT_URI_UPLOADS,
                 ProviderTableMeta.UPLOADS_STATUS + "==" + UploadStatus.UPLOAD_SUCCEEDED.value + AND +

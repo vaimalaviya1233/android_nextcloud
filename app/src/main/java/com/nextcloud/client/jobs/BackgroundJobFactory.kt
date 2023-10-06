@@ -103,6 +103,7 @@ class BackgroundJobFactory @Inject constructor(
                 FilesExportWork::class -> createFilesExportWork(context, workerParameters)
                 FilesUploadWorker::class -> createFilesUploadWorker(context, workerParameters)
                 GeneratePdfFromImagesWork::class -> createPDFGenerateWork(context, workerParameters)
+                HealthStatusWork::class -> createHealthStatusWork(context, workerParameters)
                 else -> null // caller falls back to default factory
             }
         }
@@ -258,6 +259,14 @@ class BackgroundJobFactory @Inject constructor(
             userAccountManager = accountManager,
             logger = logger,
             params = params
+        )
+    }
+
+    private fun createHealthStatusWork(context: Context, params: WorkerParameters): HealthStatusWork {
+        return HealthStatusWork(
+            context,
+            params,
+            accountManager
         )
     }
 }

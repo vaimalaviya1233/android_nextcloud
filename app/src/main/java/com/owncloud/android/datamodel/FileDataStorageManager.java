@@ -2279,7 +2279,18 @@ public class FileDataStorageManager {
         return user;
     }
 
-    public OCFile getDefaultRootPath(){
+    public OCFile getDefaultRootPath() {
         return new OCFile(OCFile.ROOT_PATH);
+    }
+
+    public List<OCFile> getFilesWithSyncConflict(User user) {
+        List<FileEntity> fileEntities = fileDao.getFilesWithSyncConflict(user.getAccountName());
+        List<OCFile> files = new ArrayList<>(fileEntities.size());
+
+        for (FileEntity fileEntity : fileEntities) {
+            files.add(createFileInstance(fileEntity));
+        }
+
+        return files;
     }
 }

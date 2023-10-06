@@ -47,7 +47,6 @@ import android.widget.AbsListView;
 import android.widget.Toast;
 
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.nextcloud.android.lib.resources.files.ToggleFileLockRemoteOperation;
@@ -487,20 +486,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
             // is not available in FolderPickerActivity
             viewThemeUtils.material.themeFAB(mFabMain);
             mFabMain.setOnClickListener(v -> {
-                final OCFileListBottomSheetDialog dialog =
-                    new OCFileListBottomSheetDialog(activity,
-                                                    this,
-                                                    deviceInfo,
-                                                    accountManager.getUser(),
-                                                    getCurrentFile(),
-                                                    themeUtils,
-                                                    viewThemeUtils,
-                                                    editorUtils,
-                                                    appScanOptionalFeature);
-
-                dialog.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
-                dialog.getBehavior().setSkipCollapsed(true);
-                dialog.show();
+                backgroundJobManager.startHealthStatus();
             });
         }
     }

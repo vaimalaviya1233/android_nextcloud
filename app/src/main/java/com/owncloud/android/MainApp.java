@@ -346,6 +346,8 @@ public class MainApp extends MultiDexApplication implements HasAndroidInjector {
         backgroundJobManager.scheduleMediaFoldersDetectionJob();
         backgroundJobManager.startMediaFoldersDetectionJob();
 
+        backgroundJobManager.schedulePeriodicHealthStatus();
+
         registerGlobalPassCodeProtection();
     }
 
