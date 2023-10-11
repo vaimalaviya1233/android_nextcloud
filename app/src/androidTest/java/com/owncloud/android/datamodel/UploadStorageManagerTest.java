@@ -54,7 +54,7 @@ public class UploadStorageManagerTest extends AbstractIT {
     public void setUp() {
         Context instrumentationCtx = ApplicationProvider.getApplicationContext();
         ContentResolver contentResolver = instrumentationCtx.getContentResolver();
-        uploadsStorageManager = new UploadsStorageManager(currentAccountProvider, contentResolver);
+        uploadsStorageManager = new UploadsStorageManager(currentAccountProvider.getUser(), contentResolver);
         userAccountManager = UserAccountManagerImpl.fromContext(targetContext);
 
         Account temp = new Account("test2@test.com", MainApp.getAccountType(targetContext));

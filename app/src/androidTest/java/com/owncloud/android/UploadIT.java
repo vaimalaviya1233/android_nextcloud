@@ -65,7 +65,7 @@ public class UploadIT extends AbstractOnServerIT {
     private static final String FOLDER = "/testUpload/";
 
     private UploadsStorageManager uploadsStorageManager =
-        new UploadsStorageManager(UserAccountManagerImpl.fromContext(targetContext),
+        new UploadsStorageManager(UserAccountManagerImpl.fromContext(targetContext).getUser(),
                                   targetContext.getContentResolver());
 
     private ConnectivityService connectivityServiceMock = new ConnectivityService() {

@@ -30,8 +30,11 @@ import com.nextcloud.client.account.UserAccountManager
 import com.owncloud.android.datamodel.FileDataStorageManager
 import com.owncloud.android.datamodel.UploadsStorageManager
 import com.owncloud.android.db.UploadResult
+import com.owncloud.android.lib.common.OwnCloudClientManagerFactory
 import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.lib.resources.status.NextcloudVersion
+import com.owncloud.android.lib.resources.status.Problem
+import com.owncloud.android.lib.resources.status.SendClientDiagnosticRemoteOperation
 import com.owncloud.android.utils.theme.CapabilityUtils
 
 class HealthStatusWork(
@@ -46,25 +49,42 @@ class HealthStatusWork(
                 continue
             }
 
-            collectSyncConflicts(user)
-            collectUploadProblems(user)
+            val problems = mutableListOf<Problem>().apply {
+                addAll(collectSyncConflicts(user))
+                addAll(collectUploadProblems(user))
+            }
+
+            if (problems.isNotEmpty()) {
+                val nextcloudClient = OwnCloudClientManagerFactory.getDefaultSingleton()
+                    .getNextcloudClientFor(user.toOwnCloudAccount(), context)
+                val result = SendClientDiagnosticRemoteOperation(problems).execute(nextcloudClient)
+
+                if (!result.isSuccess) {
+                    if (result.exception == null) {
+                        Log_OC.e(TAG, "Update client health NOT successful!")
+                    } else {
+                        Log_OC.e(TAG, "Update client health NOT successful!", result.exception)
+                    }
+                }
+            }
         }
 
         return Result.success()
     }
 
-    private fun collectSyncConflicts(user: User) {
+    private fun collectSyncConflicts(user: User): List<Problem> {
         val fileDataStorageManager = FileDataStorageManager(user, context.contentResolver)
 
         val conflicts = fileDataStorageManager.getFilesWithSyncConflict(user)
 
-        if (conflicts.isNotEmpty()) {
-            Log_OC.d(TAG, "Sync conflicts: " + conflicts.map { it.lastSyncDateForData }.joinToString())
-            // just send oldest timestamp, and count
+        return if (conflicts.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(Problem("SYNC_CONFLICT", conflicts.size, conflicts.minOf { it.lastSyncDateForData }))
         }
     }
 
-    private fun collectUploadProblems(user: User) {
+    private fun collectUploadProblems(user: User): List<Problem> {
         val uploadsStorageManager = UploadsStorageManager(user, context.contentResolver)
 
         val problems = uploadsStorageManager
@@ -82,10 +102,12 @@ class HealthStatusWork(
                     it.lastResult == UploadResult.VIRUS_DETECTED
             }.groupBy { it.lastResult }
 
-        if (problems.isNotEmpty()) {
-            Log_OC.d(TAG, problems.map { "${it.key}: ${it.value.count()}" }.joinToString())
-            // SEND to server: bucket, type, count, oldest timestamp
-            // TODO collect all types from iOS/Desktop
+        return if (problems.isEmpty()) {
+            emptyList()
+        } else {
+            return problems.map { problem ->
+                Problem(problem.key.toString(), problem.value.size, problem.value.minOf { it.uploadEndTimestamp })
+            }
         }
     }
 

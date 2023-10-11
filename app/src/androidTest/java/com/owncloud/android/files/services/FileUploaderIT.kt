@@ -65,7 +65,7 @@ abstract class FileUploaderIT : AbstractOnServerIT() {
     fun setUp() {
         val contentResolver = targetContext.contentResolver
         val accountManager: UserAccountManager = UserAccountManagerImpl.fromContext(targetContext)
-        uploadsStorageManager = UploadsStorageManager(accountManager, contentResolver)
+        uploadsStorageManager = UploadsStorageManager(accountManager.user, contentResolver)
     }
 
     /**

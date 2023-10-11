@@ -363,7 +363,7 @@ public abstract class AbstractIT {
         };
 
         UserAccountManager accountManager = UserAccountManagerImpl.fromContext(targetContext);
-        UploadsStorageManager uploadsStorageManager = new UploadsStorageManager(accountManager,
+        UploadsStorageManager uploadsStorageManager = new UploadsStorageManager(accountManager.getUser(),
                                                                                 targetContext.getContentResolver());
 
         UploadFileOperation newUpload = new UploadFileOperation(
