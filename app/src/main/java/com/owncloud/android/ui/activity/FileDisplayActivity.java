@@ -2094,17 +2094,7 @@ public class FileDisplayActivity extends FileActivity
      * @param file Image {@link OCFile} to show.
      */
     public void startImagePreview(OCFile file, boolean showPreview) {
-        Intent showDetailsIntent = new Intent(this, PreviewImageActivity.class);
-        showDetailsIntent.putExtra(EXTRA_FILE, file);
-        showDetailsIntent.putExtra(EXTRA_USER, getUser().orElseThrow(RuntimeException::new));
-        if (showPreview) {
-            startActivity(showDetailsIntent);
-        } else {
-            FileOperationsHelper fileOperationsHelper = new FileOperationsHelper(this,
-                                                                                 getUserAccountManager(),
-                                                                                 connectivityService, editorUtils);
-            fileOperationsHelper.startSyncForFileAndIntent(file, showDetailsIntent);
-        }
+        startImagePreview(file, null, showPreview);
     }
 
     /**
@@ -2116,7 +2106,10 @@ public class FileDisplayActivity extends FileActivity
         Intent showDetailsIntent = new Intent(this, PreviewImageActivity.class);
         showDetailsIntent.putExtra(PreviewImageActivity.EXTRA_FILE, file);
         showDetailsIntent.putExtra(EXTRA_USER, getUser().orElseThrow(RuntimeException::new));
-        showDetailsIntent.putExtra(PreviewImageActivity.EXTRA_VIRTUAL_TYPE, type);
+
+        if (type != null) {
+            showDetailsIntent.putExtra(PreviewImageActivity.EXTRA_VIRTUAL_TYPE, type);
+        }
 
         if (showPreview) {
             startActivity(showDetailsIntent);
