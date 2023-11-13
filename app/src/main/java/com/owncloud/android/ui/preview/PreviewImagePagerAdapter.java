@@ -69,7 +69,7 @@ public class PreviewImagePagerAdapter extends FragmentStatePagerAdapter {
                                     FileDataStorageManager storageManager,
                                     boolean onlyOnDevice,
                                     AppPreferences preferences) {
-        super(fragmentManager);
+        super(fragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         if (parentFolder == null) {
             throw new IllegalArgumentException("NULL parent folder");
         }
@@ -102,7 +102,7 @@ public class PreviewImagePagerAdapter extends FragmentStatePagerAdapter {
                                     VirtualFolderType type,
                                     User user,
                                     FileDataStorageManager storageManager) {
-        super(fragmentManager);
+        super(fragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
 
         if (type == null) {
             throw new IllegalArgumentException("NULL parent folder");
@@ -152,7 +152,10 @@ public class PreviewImagePagerAdapter extends FragmentStatePagerAdapter {
 
         if (file == null) {
             fragment = PreviewImageErrorFragment.newInstance();
-
+        } else if (file.isEncrypted() && !file.isDown()) {
+            fragment = FileDownloadFragment.newInstance(file, user, mObsoletePositions.contains(i));
+        } else if (PreviewMediaFragment.canBePreviewed(file)) {
+            fragment = PreviewMediaFragment.newInstance(file, user, 0, false);
         } else if (file.isDown()) {
             fragment = PreviewImageFragment.newInstance(file, mObsoletePositions.contains(i), false);
         } else {
@@ -160,13 +163,7 @@ public class PreviewImagePagerAdapter extends FragmentStatePagerAdapter {
                 fragment = FileDownloadFragment.newInstance(file, user, true);
                 ((FileDownloadFragment) fragment).setError(true);
             } else {
-                if (file.isEncrypted()) {
-                    fragment = FileDownloadFragment.newInstance(file, user, mObsoletePositions.contains(i));
-                } else if (PreviewMediaFragment.canBePreviewed(file)) {
-                    fragment = PreviewMediaFragment.newInstance(file, user, 0, false);
-                } else {
-                    fragment = PreviewImageFragment.newInstance(file, mObsoletePositions.contains(i), true);
-                }
+                fragment = PreviewImageFragment.newInstance(file, mObsoletePositions.contains(i), true);
             }
         }
 
