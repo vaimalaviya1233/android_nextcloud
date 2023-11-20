@@ -291,7 +291,6 @@ class GalleryFragment : OCFileListFragment(), GalleryFragmentBottomSheetActions,
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    // FORBIDDEN IN DETECTTODO: Fix folder change, it seems it doesn't work at all
     private fun searchAndDisplayAfterChangingFolder() {
         endDate = System.currentTimeMillis() / 1000
         isPhotoSearchQueryRunning = true
